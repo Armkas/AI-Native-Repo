@@ -1,7 +1,5 @@
 # 🛑 Business Invariants & Guardrails (business_invariants.md)
 
-[简体中文](business_invariants.zh-CN.md)
-
 > [!CAUTION]
 > **Core Agent Directive**:
 > This document defines the **non-negotiable business rules (Invariants)** of the system.

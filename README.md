@@ -30,11 +30,12 @@ The CLI will interactively ask you to choose from our 12-template matrix (4 Runt
 **Step 2: Choose Your Complexity Tier**
 - `light`: The bare minimum context files (PROJECT_MAP + core rules) for simple scripts or prototypes.
 - `standard`: The default. Full Context, Contracts, and Rules architecture for production services.
-- `full`: Enterprise grade. Includes Verification hooks, MCP setup, and Agent Behavior Evaluation.
+- `full`: Enterprise grade. Standard plus path guardrails (read-only / append-only files, enforced by hooks or CI) and a context freshness checker.
 
 *Alternatively, bypass the prompts with flags:*
 ```bash
 npx ai-native-repo init . --runtime cursor --tier standard
+npx ai-native-repo init . --runtime claude-code --tier full --lang zh-CN   # en (default) | zh-CN | ja
 ```
 
 ---

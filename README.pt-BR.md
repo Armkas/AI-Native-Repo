@@ -31,11 +31,12 @@ A CLI pedirá interativamente que você escolha nossa matriz de 12 modelos (4 Ru
 **Etapa 2: Escolha o seu nível de complexidade (Tier)**
 - `light`: Arquivos de contexto mínimos para scripts simples ou protótipos.
 - `standard`: O padrão. Arquitetura completa para serviços em produção.
-- `full`: Nível empresarial. Inclui ganchos de verificação, configuração de MCP e avaliação de comportamento do agente.
+- `full`: Nível empresarial. Standard mais proteções de caminhos (arquivos somente leitura / somente acréscimo, aplicadas por hooks ou CI) e um verificador de atualidade do contexto.
 
 *Alternativamente, pule os prompts com sinalizadores:*
 ```bash
 npx ai-native-repo init . --runtime cursor --tier standard
+npx ai-native-repo init . --runtime claude-code --tier full --lang zh-CN   # en (default) | zh-CN | ja
 ```
 
 ---

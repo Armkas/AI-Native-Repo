@@ -1,7 +1,5 @@
 # 🏆 Golden Feature Template (golden_feature_template.md)
 
-[简体中文](golden_feature_template.zh-CN.md)
-
 > [!IMPORTANT]
 > **Core Agent Directive**:
 > When adding or refactoring a business feature module in this repository, **you must strictly follow this template's directory layout and layer separation**, rather than inventing novel runtime abstractions.

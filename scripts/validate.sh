@@ -28,7 +28,8 @@ function check_file() {
 function check_no_string() {
     local str="$1"
     local path="$2"
-    if grep -r "$str" "$path" 2>/dev/null; then
+    local include="${3:-*}"
+    if grep -r --include="$include" "$str" "$path" 2>/dev/null; then
         echo "❌ FAIL: Found deprecated string '$str' in $path."
         FAILS=$((FAILS+1))
     else
@@ -59,7 +60,8 @@ echo "--- Template Integrity ---"
 
 echo "Checking for template drift..."
 node scripts/generate-templates.js > /dev/null
-if ! git diff --exit-code cli/templates > /dev/null; then
+# Unstaged edits and untracked new files both count as drift (plain `git diff` misses new files).
+if ! git diff --quiet -- cli/templates || [ -n "$(git ls-files --others --exclude-standard -- cli/templates)" ]; then
     echo "❌ FAIL: cli/templates is out of sync with template-source! Commit the changes after running generate-templates.js."
     FAILS=$((FAILS+1))
 else
@@ -87,12 +89,27 @@ else
     check_file "cli/templates/codex/standard/AGENTS.md"
     check_file "cli/templates/gemini-cli/standard/GEMINI.md"
     check_file "cli/templates/cursor/standard/.cursor/rules/core.mdc"
+    check_file "cli/templates/claude-code/standard/.agents/skills/verify/SKILL.md"
+    check_file "cli/templates/claude-code/full/scripts/check-freshness.sh"
 fi
 
-# 3. Drift & Stale Path Checks
+# 3. End-to-end scaffold tests (links, skills, guardrails for every runtime × tier × language)
+echo "--- Scaffold Tests ---"
+if node cli/tests/test.js > /tmp/anr-cli-test.log 2>&1; then
+    echo "✅ PASS: $(tail -1 /tmp/anr-cli-test.log)"
+else
+    cat /tmp/anr-cli-test.log
+    echo "❌ FAIL: CLI scaffold tests failed."
+    FAILS=$((FAILS+1))
+fi
+
+# 4. Drift & Stale Path Checks
 echo "--- Stale Content Detection ---"
 check_no_string "template/" "AGENTS.md"
 check_no_string "examples/ios" "AGENTS.md"
+check_no_string "template/" "CLAUDE.md"
+check_no_string "template/" "GEMINI.md"
+check_no_string "file:///" "template-source" "*.md"
 
 if [ $FAILS -gt 0 ]; then
     echo "❌ VALIDATION FAILED with $FAILS errors."

@@ -8,18 +8,16 @@
 
 ```text
 .
-├── .agentsignore       # AI 检索降噪过滤规则
 ├── AGENTS.md           # 全局 AI 代理唯一规范源 (Single Source of Truth)
-├── CLAUDE.md           # Claude Code 适配器
-├── GEMINI.md           # Gemini / Antigravity 适配器
+├── CLAUDE.md / GEMINI.md / .cursor/rules/   # 运行时适配器（只保留你所用运行时的那一个）
 ├── MANUAL_TASKS.md     # 待办人工操作与人机职责边界清单
 ├── README.md           # 人类开发者项目介绍
 │
-├── .agents/            # 机器可读索引与标准研发工作流
+├── .agents/            # 机器可读索引、规则与技能
 │   ├── context-index.md    # 快速符号与接口索引
 │   ├── dependency-map.md   # 依赖拓扑图与影响评估
 │   ├── rules/              # 细分平台规则
-│   └── workflows/          # 标准化 SOP (Feature, Migration, API)
+│   └── skills/             # 规范技能：<name>/SKILL.md（功能开发、缺陷修复、数据库迁移……）
 │
 ├── docs/               # 知识层 (AI Context Architecture)
 │   ├── architecture/       # 系统架构与黄金特性样板

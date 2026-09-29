@@ -1,32 +1,45 @@
 #!/usr/bin/env node
+// Builds the 12 runtime × tier templates in cli/templates/ from template-source/.
+//
+// Both axes are layered, later layers overwrite earlier ones:
+//   common/<layer>/          light = [light]            standard = [standard]            full = [standard, full]
+//   runtimes/<rt>/<layer>/   light = [base]             standard = [base, standard]      full = [base, standard, full]
+// A missing optional layer is skipped; a missing required layer is fatal.
 const fs = require('fs');
 const path = require('path');
 
 const runtimes = ['claude-code', 'codex', 'gemini-cli', 'cursor'];
 const tiers = ['light', 'standard', 'full'];
+const COMMON_LAYERS = { light: ['light'], standard: ['standard'], full: ['standard', 'full'] };
+const RUNTIME_LAYERS = { light: ['base'], standard: ['base', 'standard'], full: ['base', 'standard', 'full'] };
+const IGNORED = new Set(['.DS_Store', 'Thumbs.db']);
 
 const srcDir = path.join(__dirname, '..', 'template-source');
 // We generate them directly into the CLI package so it can be packed
 const outDir = path.join(__dirname, '..', 'cli', 'templates');
 
 function copyRecursive(src, dest) {
-  if (!fs.existsSync(src)) {
-    console.error(`❌ FATAL: Required template source missing: ${src}`);
-    process.exit(1);
-  }
-  if (!fs.existsSync(dest)) {
-    fs.mkdirSync(dest, { recursive: true });
-  }
-  const entries = fs.readdirSync(src, { withFileTypes: true });
-  for (const entry of entries) {
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    if (IGNORED.has(entry.name)) continue;
     const srcPath = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
     if (entry.isDirectory()) {
       copyRecursive(srcPath, destPath);
     } else {
       fs.copyFileSync(srcPath, destPath);
+      fs.chmodSync(destPath, fs.statSync(srcPath).mode);
     }
   }
+}
+
+function copyLayer(src, dest, required) {
+  if (!fs.existsSync(src)) {
+    if (!required) return;
+    console.error(`❌ FATAL: Required template source missing: ${src}`);
+    process.exit(1);
+  }
+  copyRecursive(src, dest);
 }
 
 console.log("Generating 12 AI-Native Template combinations...");
@@ -37,15 +50,10 @@ for (const runtime of runtimes) {
   for (const tier of tiers) {
     const targetDir = path.join(outDir, runtime, tier);
     console.log(` -> ${runtime} / ${tier}`);
-    fs.mkdirSync(targetDir, { recursive: true });
-    
-    // 1. Copy tier common files
-    const tierSrc = path.join(srcDir, 'common', tier);
-    copyRecursive(tierSrc, targetDir);
-
-    // 2. Copy runtime specific files
-    const runtimeSrc = path.join(srcDir, 'runtimes', runtime);
-    copyRecursive(runtimeSrc, targetDir);
+    COMMON_LAYERS[tier].forEach((layer, i) =>
+      copyLayer(path.join(srcDir, 'common', layer), targetDir, i === 0));
+    RUNTIME_LAYERS[tier].forEach((layer, i) =>
+      copyLayer(path.join(srcDir, 'runtimes', runtime, layer), targetDir, i === 0));
   }
 }
 

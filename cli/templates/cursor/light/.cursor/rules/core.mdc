@@ -1,6 +1,8 @@
 ---
-description: 'AI-Native core rules'
-globs: '*'
+description: AI-Native core router — always applied
+alwaysApply: true
 ---
-Please read docs/PROJECT_MAP.md first.
-
+- Read and obey `AGENTS.md` at the repository root before writing or refactoring code. It is the single source of rules; this file only routes to it.
+- Navigation: `AGENTS.md` → `docs/PROJECT_MAP.md` → the specific domain / contract you need.
+- Skills: when a task matches a skill in `.agents/skills/<name>/SKILL.md` (see each file's `description`), read that file and follow it.
+- Never duplicate business rules into `.cursor/rules/`; add them to `docs/` and link.

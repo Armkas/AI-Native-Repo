@@ -16,6 +16,8 @@ You choose a Tier based on your team's needs, not the tool you use.
 - **Verification:** Basic testing.
 - **Human Boundary:** Minimal but explicit.
 
+**Ships (`anr init --tier light`):** `AGENTS.md` router, runtime adapter, `docs/PROJECT_MAP.md`, `docs/architecture/overview.md`, `MANUAL_TASKS.md`, skill `verify`.
+
 *Philosophy:* Establish Context Routing first, before building heavy automation infrastructure.
 
 ## Tier 2: Standard
@@ -29,6 +31,8 @@ You choose a Tier based on your team's needs, not the tool you use.
 - **Verification:** Unit tests, linting, CI, repository validation.
 - **Human Boundary:** Explicit `MANUAL_TASKS.md` for production and destructive actions.
 
+**Ships (`anr init --tier standard`):** everything in Light, plus `.agents/rules/global.md`, `.agents/context-index.md`, `.agents/dependency-map.md`, domains / contracts / invariants / ADR docs, and skills `feature-development`, `bug-fix`, `database-migration`, `api-contract-change`, `verify`, `doc-sync`. Claude Code additionally gets `.claude/settings.json` permission boundaries (deny secrets and force-push, ask before push).
+
 *Philosophy:* A balanced workspace where AI has structured knowledge and deterministic guardrails.
 
 ## Tier 3: Full
@@ -41,5 +45,7 @@ You choose a Tier based on your team's needs, not the tool you use.
 - **Skills/Workflows:** Rich ecosystem of specialized agent sub-roles, MCP tool integrations, lifecycle hooks.
 - **Verification:** Strong CI, Agent Behavior Evaluation, static analysis.
 - **Human Boundary:** Strict permission boundaries and detailed approval flows.
+
+**Ships (`anr init --tier full`):** everything in Standard, plus `.agents/guardrails/protected-paths.txt` (read-only / append-only paths) enforced by `scripts/guard-paths.sh` (a `PreToolUse` hook in Claude Code, a CI step elsewhere), and `scripts/check-freshness.sh` (broken links, absolute paths, malformed skills, oversized router, stale index paths, god files). Subagents, MCP servers and behavior evals are project-specific and are added by the team, not generated.
 
 *Philosophy:* Maximum automation, but with strictly controlled Context Cost and rigid verification closed-loops.

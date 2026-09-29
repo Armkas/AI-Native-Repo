@@ -52,6 +52,8 @@ Agent 应根据任务动态路由到必要的上下文：
 **建立明确的 Runtime 所有权，避免规则漂移。**
 一个生产项目可以同时使用多个 Agent Runtime（例如开发者用 Cursor，CI 用 Claude Code），但你必须明确划分所有权。业务逻辑（`docs/domains`）是通用的，你绝不能在 `.cursor/rules/` 和 `.claude/skills` 中重复维护相同的业务规则。每个工具的 Runtime Adapter 都必须干净地将 Agent 引导回唯一的语义真理。
 
+技能与护栏同理：规范技能只在 `.agents/skills/<name>/SKILL.md` 维护一份；需要专属目录的运行时（`.claude/skills`、`.gemini/skills`）拿到的是**符号链接**而不是副本。护栏逻辑写在与运行时无关的脚本里，适配器只负责挂接触发方式（支持钩子就用钩子，不支持就放进 CI）。详见 [Runtime Adapters](adapters.md)。
+
 ---
 
 # III. The Human-Agent Boundary (人机边界)

@@ -31,11 +31,12 @@ CLI 會互動式地要求你從我們的 12-模板矩陣（4 種運行時 × 3 �
 **步驟 2：選擇你的複雜度層級**
 - `light`: 用於簡單腳本或原型的最基本上下文文件（PROJECT_MAP + 核心規則）。
 - `standard`: 默認選項。適用於生產服務的完整上下文、契約和規則架構。
-- `full`: 企業級。包含驗證鉤子、MCP 設置和代理行為評估。
+- `full`: 企業級。在 standard 基礎上增加路徑護欄（唯讀 / 僅追加檔案，由鉤子或 CI 強制執行）與上下文新鮮度檢查腳本。
 
 *或者，你可以通過參數跳過提示：*
 ```bash
 npx ai-native-repo init . --runtime cursor --tier standard
+npx ai-native-repo init . --runtime claude-code --tier full --lang zh-CN   # en (default) | zh-CN | ja
 ```
 
 ---

@@ -10,14 +10,11 @@
 Whenever modifications are made to this repository (spec, templates, or examples), execute the following checks to verify integrity:
 
 ```bash
-# 1. Run the official self-validation script
+# 1. Structure, template drift, and end-to-end scaffold tests (all runtime × tier × language combos)
 ./scripts/validate.sh
 
-# 2. Check for broken file links and syntax consistency across Markdown files
-find template-source cli/templates spec examples -type f -name "*.md" -exec grep -H "file:///" {} + || true
-
-# 3. Verify git status and ensure no untracked noise or broken artifacts
-git status
+# 2. Scaffold tests alone (fast loop while editing template-source/)
+node scripts/generate-templates.js && node cli/tests/test.js
 ```
 
 ---
@@ -42,6 +39,8 @@ Before modifying any content, identify the required context area:
 6. **Native Templates (The Skeletons, Source of Truth)**: [template-source/](template-source/)
    - `common/` (`light/`, `standard/`, `full/`)
    - `runtimes/` (`claude-code/`, `codex/`, `cursor/`, `gemini-cli/`)
+   - Layering: `full` = `common/standard` + `common/full`; runtime files = `runtimes/<rt>/base` + tier overlays. Language variants (`*.zh-CN.md`) replace the base file at `anr init --lang`; they must link to base filenames.
+   - Canonical skills live in `common/<tier>/.agents/skills/`; runtimes get a symlink at init, never a copy in `template-source/`.
    - Generated output for the CLI lives in `cli/templates/` — never hand-edit it, run `scripts/generate-templates.js` instead.
 7. **Reference Implementations**: [examples/](examples/) (`claude-code/`, `codex/`, `cursor/`, `gemini-cli/`)
 
@@ -59,4 +58,4 @@ Before modifying any content, identify the required context area:
 
 - [ ] When adding/modifying rules in `spec/repository-standard.md`, update `spec/repository-standard.zh-CN.md`, `spec/philosophy*.md`, and **every** `README*.md` (not just English/Chinese/Japanese) accordingly.
 - [ ] When adding a new Model Provider or Runtime, update `spec/model-compatibility.md` only — never add a per-model template or a per-model `README` section.
-- [ ] Ensure all relative Markdown links in `template-source/`, `cli/templates/`, and `spec/` point to valid files (run the check in the Verification section above).
+- [ ] Template links, skills frontmatter and guardrails are covered by `cli/tests/test.js`; extend the test when adding a new template capability.

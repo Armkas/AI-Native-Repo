@@ -21,6 +21,7 @@ Commands:
 Options for 'init':
   --runtime <id>  Specify the Agent Runtime (e.g., claude-code, cursor, codex, gemini-cli)
   --tier <id>     Specify the Tier (light, standard, full)
+  --lang <id>     Template language: en (default), zh-CN, ja (falls back to en per file)
   --dry-run       Show what would be created without making changes
 
 Example:

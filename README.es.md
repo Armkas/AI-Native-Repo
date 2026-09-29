@@ -31,11 +31,12 @@ La CLI te pedirá interactivamente que elijas entre nuestra matriz de 12 plantil
 **Paso 2: Elige tu nivel de complejidad**
 - `light`: Los archivos de contexto mínimos (PROJECT_MAP + reglas principales) para scripts simples o prototipos.
 - `standard`: El predeterminado. Arquitectura completa de Contexto, Contratos y Reglas para servicios en producción.
-- `full`: Nivel empresarial. Incluye ganchos de verificación, configuración MCP y evaluación del comportamiento del agente.
+- `full`: Nivel empresarial. Standard más barreras de rutas (archivos de solo lectura / solo anexar, aplicadas con hooks o CI) y un verificador de frescura del contexto.
 
 *Alternativamente, puedes omitir las preguntas interactivas:*
 ```bash
 npx ai-native-repo init . --runtime cursor --tier standard
+npx ai-native-repo init . --runtime claude-code --tier full --lang zh-CN   # en (default) | zh-CN | ja
 ```
 
 ---

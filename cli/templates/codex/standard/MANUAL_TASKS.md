@@ -1,7 +1,5 @@
 # 📋 Manual Tasks Checklist (MANUAL_TASKS.md)
 
-[简体中文](MANUAL_TASKS.zh-CN.md) | [日本語](MANUAL_TASKS.ja.md)
-
 > [!NOTE]
 > This document tracks tasks that require **human intervention, external dashboard actions, or manual verification**.
 > AI Agents cannot access external third-party consoles or physical devices. When a task requires human intervention, record it here with an actionable `[ ]` checkbox and notify the user.

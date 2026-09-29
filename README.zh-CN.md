@@ -30,11 +30,12 @@ CLI 会以交互的方式让你从我们的 12 套模板矩阵（4 种运行时 
 **第二步：选择复杂度层级 (Tier)**
 - `light`: 最基础的上下文文件（PROJECT_MAP + 核心规则），适合简单的脚本或原型。
 - `standard`: 默认选项。包含完整的上下文、契约和规则架构，适合生产级服务。
-- `full`: 企业级标准。包含额外的验证（Verification）钩子、MCP 服务器配置，以及智能体行为评估模型。
+- `full`: 企业级标准。在 standard 基础上增加路径护栏（只读 / 只追加文件，由钩子或 CI 强制执行）与上下文新鲜度检查脚本。
 
 *或者，你也可以通过参数直接一键生成：*
 ```bash
 npx ai-native-repo init . --runtime cursor --tier standard
+npx ai-native-repo init . --runtime claude-code --tier full --lang zh-CN   # en (default) | zh-CN | ja
 ```
 
 ---

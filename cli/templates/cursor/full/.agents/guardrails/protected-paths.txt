@@ -1,0 +1,12 @@
+# Protected paths — enforced by scripts/guard-paths.sh (runtime hook and/or CI).
+# Format: <mode> <glob>   (glob is matched against the repo-relative path; * also matches /)
+#   read-only    agents may never create, edit or delete matching files
+#   append-only  agents may create new matching files but never edit or delete existing ones
+#
+# Adjust to your project. Examples:
+append-only  db/migrations/*
+append-only  supabase/migrations/*
+read-only    .env
+read-only    .env.*
+read-only    *.lock
+read-only    package-lock.json

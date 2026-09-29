@@ -31,11 +31,12 @@ CLI は、12 のテンプレートマトリックス（4 ランタイム × 3 �
 **ステップ 2: 複雑さのティア（階層）の選択**
 - `light`: 単純なスクリプト用の最小限のコンテキストファイル。
 - `standard`: デフォルト。本番サービス向けの完全なコンテキスト、契約、およびルールのアーキテクチャ。
-- `full`: エンタープライズグレード。検証フック、MCP セットアップ、およびエージェントの動作評価が含まれます。
+- `full`: エンタープライズグレード。standard に加え、パスガードレール（読み取り専用 / 追記のみのファイル。フックまたは CI で強制）とコンテキスト鮮度チェックを含みます。
 
 *または、フラグで対話プロンプトをスキップできます:*
 ```bash
 npx ai-native-repo init . --runtime cursor --tier standard
+npx ai-native-repo init . --runtime claude-code --tier full --lang zh-CN   # en (default) | zh-CN | ja
 ```
 
 ---

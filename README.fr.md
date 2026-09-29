@@ -31,11 +31,12 @@ La CLI vous demandera de choisir parmi notre matrice de 12 modèles (4 Runtimes 
 **Étape 2 : Choisissez votre niveau de complexité (Tier)**
 - `light` : Les fichiers de contexte minimum pour des scripts simples.
 - `standard` : Par défaut. Architecture complète pour les services en production.
-- `full` : Niveau entreprise. Inclut les hooks de vérification, la configuration MCP, et l'évaluation du comportement de l'agent.
+- `full` : Niveau entreprise. Standard plus des garde-fous de chemins (fichiers en lecture seule / ajout seul, appliqués par hooks ou CI) et un vérificateur de fraîcheur du contexte.
 
 *Alternativement, ignorez les invites avec les paramètres :*
 ```bash
 npx ai-native-repo init . --runtime cursor --tier standard
+npx ai-native-repo init . --runtime claude-code --tier full --lang zh-CN   # en (default) | zh-CN | ja
 ```
 
 ---

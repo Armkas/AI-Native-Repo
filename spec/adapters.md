@@ -17,13 +17,27 @@ An Adapter must fulfill the following responsibilities:
 
 | Canonical Concept | Claude Code | Codex / OpenAI | Cursor | Gemini CLI |
 | :--- | :--- | :--- | :--- | :--- |
-| **Project Entry Instructions** | `CLAUDE.md` | `AGENTS.md` | `AGENTS.md` / `.cursor/rules/core.mdc` | `GEMINI.md` |
-| **Skill (Atomic capability)** | `.claude/skills/` | `.agents/skills/` | `.cursor/rules/*.mdc` | `.gemini/skills/` |
-| **Verification Hook** | `.claude/settings.json` | CI / `.agents/hooks/` | N/A (Manual/CI) | `.gemini/hooks/` |
+| **Project Entry Instructions** | `CLAUDE.md` (`@AGENTS.md` import) | `AGENTS.md` | `AGENTS.md` / `.cursor/rules/core.mdc` | `GEMINI.md` (`@AGENTS.md` import) |
+| **Skill (Atomic capability)** | `.claude/skills/` → symlink to `.agents/skills/` | `.agents/skills/` (native) | Routed to `.agents/skills/` by `core.mdc` | `.gemini/skills/` → symlink to `.agents/skills/` |
+| **Verification Hook / Guardrail** | `.claude/settings.json` `PreToolUse` → `scripts/guard-paths.sh` | CI: `scripts/guard-paths.sh ci <base>` | CI: `scripts/guard-paths.sh ci <base>` | CI: `scripts/guard-paths.sh ci <base>` |
+| **Permission Boundary** | `.claude/settings.json` `permissions` | Codex approval / sandbox config | N/A (Manual) | Gemini CLI settings |
 | **Subagent Definition** | `.claude/agents/` | `.agents/subagents/` | N/A | `.gemini/agents/` |
 | **Tool / MCP Server** | `.mcp.json` / settings | Codex config | `.cursor/mcp.json` | Gemini MCP settings |
-| **Path-Scoped Context** | Claude rules | Scoped instructions | `.cursor/rules/*.mdc` | Hierarchy conventions |
-| **Ignore Config** | `.claudeignore` | `.agentsignore` | `.cursorignore` | `.geminiignore` |
+| **Path-Scoped Context** | Nested `CLAUDE.md` / `AGENTS.md` | Nested `AGENTS.md` | `.cursor/rules/*.mdc` (globs) | Nested `GEMINI.md` |
+| **Ignore Config** | `permissions.deny` `Read(...)` rules | `.agentsignore` (convention) | `.cursorignore` | `.geminiignore` |
+
+### One Source of Truth for Skills
+
+Skills are semantic assets, so they live **once**, runtime-neutrally, in `.agents/skills/<name>/SKILL.md`
+(the open Agent Skills format: YAML frontmatter with `name` matching the directory and a `description`
+that tells the runtime *when* to load it). A runtime that insists on its own directory gets a **symlink**,
+created by `anr init`, never a hand-maintained copy. Copies drift; links cannot.
+
+### Guardrails Are Runtime-Neutral Scripts
+
+Hook logic lives in `scripts/` (e.g. `guard-paths.sh`, rules in `.agents/guardrails/protected-paths.txt`).
+The runtime adapter only *wires* it: a `PreToolUse` hook where the runtime supports one, a CI step
+(`guard-paths.sh ci origin/main`) where it does not. The rule is written once; only the trigger differs.
 
 ### Adding New Adapters
 If your team uses a different Agent Runtime (e.g., Windsurf, Trae, GitHub Copilot), you do NOT need to reinvent the AI-Native architecture. You simply provide a new column in this table mapping how that tool implements entry points, skills, hooks, and scopes.

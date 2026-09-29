@@ -1,5 +1,7 @@
-@AGENTS.zh-CN.md
+@AGENTS.md
 
-# Gemini CLI 补充说明
-本仓库使用 AI-Native 仓库标准。全局语义真理已从上方的 `AGENTS.zh-CN.md` 导入。
-Gemini 专用指令：执行任务时请使用 `.gemini/skills`，验证行为请使用 `.gemini/hooks`。
+# Gemini CLI 适配器
+
+- 全局语义已从上方 `AGENTS.md` 导入，不要在此重复。
+- 技能：`.gemini/skills` 是指向规范目录 `.agents/skills/` 的链接 —— 只在那里编辑技能，不要维护副本。
+- 本文件只保留 Gemini 专属的行为约定。

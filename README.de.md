@@ -31,11 +31,12 @@ Die CLI fordert dich interaktiv auf, aus unserer 12-Vorlagen-Matrix (4 Runtimes 
 **Schritt 2: Wähle deinen Komplexitätsgrad (Tier)**
 - `light`: Die absolut minimalen Kontextdateien für einfache Skripte.
 - `standard`: Der Standard. Vollständige Kontext-, Vertrags- und Regelarchitektur.
-- `full`: Enterprise-Klasse. Beinhaltet Verifizierungs-Hooks, MCP-Setup und Auswertung des Agentenverhaltens.
+- `full`: Enterprise-Klasse. Standard plus Pfad-Guardrails (schreibgeschützte / nur-anhängen Dateien, durchgesetzt per Hook oder CI) und ein Kontext-Aktualitätscheck.
 
 *Alternativ kannst du die Eingabeaufforderungen mit Parametern überspringen:*
 ```bash
 npx ai-native-repo init . --runtime cursor --tier standard
+npx ai-native-repo init . --runtime claude-code --tier full --lang zh-CN   # en (default) | zh-CN | ja
 ```
 
 ---
