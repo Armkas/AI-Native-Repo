@@ -1,18 +1,15 @@
 {
-  "hooks": {
-    "PreToolUse": [
-      {
-        "commands": ["git push", "git commit"],
-        "type": "command",
-        "command": "echo '❌ FATAL: Committing and pushing is protected. See MANUAL_TASKS.md.' && exit 1"
-      }
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)"
     ],
-    "PostToolUse": [
-      {
-        "commands": ["edit_file", "write_file"],
-        "type": "command",
-        "command": "npm run format"
-      }
+    "ask": [
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }

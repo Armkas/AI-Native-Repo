@@ -46,6 +46,6 @@ You choose a Tier based on your team's needs, not the tool you use.
 - **Verification:** Strong CI, Agent Behavior Evaluation, static analysis.
 - **Human Boundary:** Strict permission boundaries and detailed approval flows.
 
-**Ships (`anr init --tier full`):** everything in Standard, plus `.agents/guardrails/protected-paths.txt` (read-only / append-only paths) enforced by `scripts/guard-paths.sh` (a `PreToolUse` hook in Claude Code, a CI step elsewhere), and `scripts/check-freshness.sh` (broken links, absolute paths, malformed skills, oversized router, stale index paths, god files). Subagents, MCP servers and behavior evals are project-specific and are added by the team, not generated.
+**Ships (`anr init --tier full`):** everything in Standard, plus `.agents/guardrails/protected-paths.txt` (read-only / append-only paths) enforced by `scripts/guard-paths.sh` (a native pre-edit hook in Claude Code, Gemini CLI and Codex; a CI step for Cursor and for edits made through the shell), and `scripts/check-freshness.sh` (broken links, absolute paths, malformed skills, oversized router, stale index paths, god files). Subagents, MCP servers and behavior evals are project-specific and are added by the team, not generated.
 
 *Philosophy:* Maximum automation, but with strictly controlled Context Cost and rigid verification closed-loops.

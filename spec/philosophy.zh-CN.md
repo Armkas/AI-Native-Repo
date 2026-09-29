@@ -557,14 +557,16 @@ AI-Native 仓库应避免大型手动维护的源文件。
 
 `build/`、`DerivedData/`、`Pods/`、`node_modules/`、`.venv/`、`cache/`、`logs/`、
 二进制文件（如 `.gguf`, `.bin`）、敏感配置（`.env*`）必须显式排除。
-具体配置方式由 Runtime 决定，例如 `.agentsignore`、`.cursorignore` 或 `.geminiignore`。
+使用各 Runtime 自己的机制：Claude Code 用 `permissions.deny` 的 `Read(...)` 规则，Cursor 用 `.cursorignore`，
+Gemini CLI 用 `.geminiignore`。不存在跨 Runtime 的通用忽略文件——`.agentsignore` 没有任何主流 Runtime 会读取，
+Codex 更是完全没有忽略文件——所以密钥应放在工作区之外，而不是寄希望于某个约定。
 不要把上下文预算消耗在机器产物或噪音数据上。
 
 ## 43.1 语义真理 vs 运行入口 (Semantic Truth vs Runtime Entry)
 
 在异构 AI 工具并存的现实中（Claude Code, Gemini, Windsurf, Cursor），不同的工具默认读取不同的入口（`CLAUDE.md`, `GEMINI.md`, `.cursor/rules/*.mdc`）。
 原则是：**`docs/` 承载项目无关具体工具的语义真理 (Semantic Truth)，而各家特有的配置文件仅作为运行入口 (Runtime Entry)**。
-不要将业务知识复制到 `.cursorrules` 或 `CLAUDE.md` 中。这些 Runtime Adapter 应当将 Agent 引导路由回统一的 `docs/` 标准架构中。
+不要将业务知识复制到 `.cursor/rules/` 或 `CLAUDE.md` 中。这些 Runtime Adapter 应当将 Agent 引导路由回统一的 `docs/` 标准架构中。
 
 ## 43.2 人机协作边界与工具 (`MANUAL_TASKS.md`)
 

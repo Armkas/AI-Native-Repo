@@ -52,7 +52,7 @@ Your repository's semantics (Domains, Contracts, Workflows) must be **Model-Agno
 **Establish Explicit Runtime Ownership.**
 While a production project can use multiple agent runtimes concurrently (e.g. Cursor for devs + Claude Code for CI scripts), you must explicitly divide ownership. The business logic (`docs/domains`) remains universal, but you must never duplicate identical business rules across `.cursor/rules/` and `.claude/skills`. Each runtime adapter must cleanly route to the single source of semantic truth.
 
-The same applies to skills and guardrails: canonical skills live once in `.agents/skills/<name>/SKILL.md`, and a runtime that needs its own directory (`.claude/skills`, `.gemini/skills`) receives a **symlink**, not a copy. Guardrail logic lives in runtime-neutral scripts; adapters only wire the trigger (a hook, or a CI step where the runtime has no hooks). See [Runtime Adapters](adapters.md).
+The same applies to skills and guardrails: canonical skills live once in `.agents/skills/<name>/SKILL.md`. Runtimes that discover `.agents/skills/` natively (Codex, Cursor, Gemini CLI) need nothing more; a runtime that only reads its own directory (Claude Code's `.claude/skills`) receives a **symlink**, not a copy. Guardrail logic lives in runtime-neutral scripts; adapters only wire the trigger (a native pre-edit hook, plus a CI step that shell edits cannot bypass). See [Runtime Adapters](adapters.md).
 
 ---
 

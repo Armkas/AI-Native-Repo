@@ -544,15 +544,18 @@ AI-Friendly なリポジトリは、手動で保守される巨大なソース�
 
 # XVI. 無意味なコンテキストの回避と Token 削減
 
-## 43. .agentsignore によるノイズの明示的隔離
+## 43. 除外設定によるノイズの明示的隔離
 
 `build/`、`DerivedData/`、`Pods/`、`node_modules/`、`.venv/`、`cache/`、`logs/`、
-バイナリファイル（`.gguf`, `.bin`）、環境変数（`.env*`）は、ルートの `.agentsignore` によって明示的に除外されなければならない。
+バイナリファイル（`.gguf`, `.bin`）、環境変数（`.env*`）は明示的に除外されなければならない。
+除外には各 Runtime 固有の仕組みを使う：Claude Code は `permissions.deny` の `Read(...)` ルール、Cursor は `.cursorignore`、
+Gemini CLI は `.geminiignore`。Runtime 横断の共通除外ファイルは存在しない（`.agentsignore` を読む主要 Runtime はなく、
+Codex には除外ファイル自体がない）ため、シークレットは作業ツリーの外に置くこと。
 コンパイラ出力やバイナリノイズでコンテキスト予算を消費してはならない。
 
 ## 43.1 マルチ AI アダプター体系 (Multi-Agent Adapters)
 
-Claude Code、Gemini、Windsurf、Cursor などの異種 AI ツールが混在する現場では、各ツールが異なるルートファイルを読み込む（`CLAUDE.md`, `GEMINI.md`, `.cursorrules`）。
+Claude Code、Gemini、Windsurf、Cursor などの異種 AI ツールが混在する現場では、各ツールが異なるルートファイルを読み込む（`CLAUDE.md`, `GEMINI.md`, `.cursor/rules/*.mdc`）。
 原則として、**`AGENTS.md` を唯一の真実の源 (Single Source of Truth)** とし、その他のツール用ファイルは `@AGENTS.md` をインポートする軽量な「アダプター（Adapter）」として機能させ、モデル固有の回避指示のみを追記する。
 
 ## 43.2 人間と AI の責任境界 (MANUAL_TASKS.md)

@@ -554,14 +554,16 @@ source of truth.
 
 `build/`, `DerivedData/`, `Pods/`, `node_modules/`, `.venv/`, `cache/`, `logs/`,
 binaries (`.gguf`, `.bin`), and secrets (`.env*`) must be explicitly excluded.
-Depending on the Runtime, this might be a root `.agentsignore`, `.cursorignore`, or `.geminiignore`.
-Never burn context budget on compiler outputs or binary noise.
+Use each Runtime's own mechanism: `permissions.deny` `Read(...)` rules in Claude Code, `.cursorignore` in Cursor,
+`.geminiignore` in Gemini CLI. There is no cross-runtime ignore file — a `.agentsignore` is read by no
+major runtime, and Codex has no ignore file at all — so secrets belong outside the working tree, not
+behind a convention. Never burn context budget on compiler outputs or binary noise.
 
 ## 42.1 Semantic Truth vs Runtime Entry
 
 In a heterogeneous AI landscape (Claude Code, Gemini, Windsurf, Cursor), different tools load different root instructions (`CLAUDE.md`, `GEMINI.md`, `.cursor/rules/*.mdc`).
 The architectural principle: **`docs/` holds the Semantic Truth, while the runtime-specific file acts purely as the Runtime Entry**.
-Do not duplicate business knowledge into `.cursorrules` and `CLAUDE.md`. Instead, those runtime adapters should route the agent into the shared `docs/` repository standard.
+Do not duplicate business knowledge into `.cursor/rules/` and `CLAUDE.md`. Instead, those runtime adapters should route the agent into the shared `docs/` repository standard.
 
 ## 42.2 Human-in-the-Loop Boundaries & Tools (`MANUAL_TASKS.md`)
 

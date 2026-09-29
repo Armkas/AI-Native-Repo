@@ -1,5 +1,5 @@
 ---
 description: Architecture rules for business logic
-globs: src/**/*.ts
+globs: ios/**/*.swift
 ---
-All business logic must conform to the domain invariants described in `docs/invariants/`.
+All business logic must conform to the domain invariants described in `docs/domains/` (see the *Strong Constraints* section of each domain).
