@@ -4,18 +4,18 @@
     "deny": [
       "Read(./.env)",
       "Read(./.env.*)",
-      "Bash(git push --force:*)",
-      "Bash(git push -f:*)",
-      "Bash(git reset --hard:*)"
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git reset --hard *)"
     ],
     "ask": [
-      "Bash(git push:*)"
+      "Bash(git push *)"
     ]
   },
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|MultiEdit|Write|NotebookEdit",
+        "matcher": "Edit|Write|NotebookEdit",
         "hooks": [
           {
             "type": "command",

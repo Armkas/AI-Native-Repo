@@ -5,9 +5,9 @@ const readline = require('readline');
 const RUNTIMES = ['claude-code', 'codex', 'gemini-cli', 'cursor'];
 const TIERS = ['light', 'standard', 'full'];
 const LANGS = ['en', 'zh-CN', 'ja'];
-// Runtimes that read skills from their own directory get a link to the canonical .agents/skills/.
-// Codex reads .agents/skills/ natively; Cursor is routed there by .cursor/rules/core.mdc.
-const SKILL_LINKS = { 'claude-code': '.claude/skills', 'gemini-cli': '.gemini/skills' };
+// Runtimes that only read skills from their own directory get a link to the canonical .agents/skills/.
+// Codex, Cursor and Gemini CLI discover .agents/skills/ natively; Claude Code reads only .claude/skills/.
+const SKILL_LINKS = { 'claude-code': '.claude/skills' };
 const VARIANT_RE = /^(.+)\.(zh-CN|ja)(\.[^.]+)$/;
 const CLI_VERSION = require('../package.json').version;
 

@@ -3,5 +3,5 @@
 # Gemini CLI Adapter
 
 - Global semantics are imported above from `AGENTS.md`; do not duplicate them here.
-- Skills: `.gemini/skills` is a link to the canonical `.agents/skills/` — edit skills there, never in a copy.
+- Skills: Gemini CLI reads the canonical `.agents/skills/` natively (the official alias of `.gemini/skills/`, and it takes precedence). Edit skills there; do not create a `.gemini/skills/` copy.
 - Keep only Gemini-specific behavior in this file.

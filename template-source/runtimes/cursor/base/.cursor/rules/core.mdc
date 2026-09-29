@@ -4,5 +4,5 @@ alwaysApply: true
 ---
 - Read and obey `AGENTS.md` at the repository root before writing or refactoring code. It is the single source of rules; this file only routes to it.
 - Navigation: `AGENTS.md` → `docs/PROJECT_MAP.md` → the specific domain / contract you need.
-- Skills: when a task matches a skill in `.agents/skills/<name>/SKILL.md` (see each file's `description`), read that file and follow it.
+- Skills: Cursor discovers `.agents/skills/<name>/SKILL.md` natively. When a task matches a skill's `description`, follow that skill instead of improvising; do not copy skills into `.cursor/`.
 - Never duplicate business rules into `.cursor/rules/`; add them to `docs/` and link.

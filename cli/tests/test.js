@@ -11,7 +11,9 @@ const RUNTIMES = ['claude-code', 'codex', 'gemini-cli', 'cursor'];
 const TIERS = ['light', 'standard', 'full'];
 const LANGS = ['en', 'zh-CN'];
 const ENTRY = { 'claude-code': 'CLAUDE.md', codex: 'AGENTS.md', 'gemini-cli': 'GEMINI.md', cursor: '.cursor/rules/core.mdc' };
-const SKILL_LINKS = { 'claude-code': '.claude/skills', 'gemini-cli': '.gemini/skills' };
+const SKILL_LINKS = { 'claude-code': '.claude/skills' };
+// Native pre-edit hook config per runtime (full tier). Cursor's Write payload is undocumented, so it relies on CI.
+const HOOK_CONFIGS = { 'claude-code': '.claude/settings.json', 'gemini-cli': '.gemini/settings.json', codex: '.codex/hooks.json' };
 
 let failures = 0;
 let checks = 0;
@@ -93,6 +95,20 @@ try {
           check(fs.lstatSync(link).isSymbolicLink(), `${label}: ${SKILL_LINKS[runtime]} should be a symlink, not a copy`);
         }
 
+        if (runtime !== 'claude-code') {
+          check(!fs.existsSync(path.join(dir, '.gemini', 'skills')) && !fs.existsSync(path.join(dir, '.claude', 'skills')),
+            `${label}: runtimes that read .agents/skills/ natively must not get a duplicate skills directory`);
+        }
+
+        if (tier === 'full' && HOOK_CONFIGS[runtime]) {
+          let hooks = null;
+          try { hooks = JSON.parse(fs.readFileSync(path.join(dir, HOOK_CONFIGS[runtime]), 'utf8')).hooks; } catch { /* reported below */ }
+          check(hooks, `${label}: ${HOOK_CONFIGS[runtime]} missing, invalid or without hooks`);
+          const scripts = JSON.stringify(hooks || {}).match(/scripts\/[\w.-]+/g) || [];
+          check(scripts.length > 0, `${label}: full tier should wire scripts/guard-paths.sh as a native pre-edit hook`);
+          for (const s of scripts) check(fs.existsSync(path.join(dir, s)), `${label}: hook references missing ${s}`);
+        }
+
         const settings = path.join(dir, '.claude', 'settings.json');
         if (runtime === 'claude-code' && tier !== 'light') {
           let parsed = null;
@@ -125,6 +141,17 @@ try {
           check(guard('db/migrations/002_new.sql', false) === 0, `${label}: creating a new migration must be allowed`);
           check(guard('.env', false) === 2, `${label}: .env must be read-only`);
           check(guard('src/app.ts', false) === 0, `${label}: ordinary files must not be blocked`);
+
+          // Codex apply_patch: tool_input.command holds the patch text, paths are relative to cwd.
+          const codexPatch = (body) => run('bash', ['scripts/guard-paths.sh'], {
+            cwd: dir, env: { ...process.env, CLAUDE_PROJECT_DIR: '' },
+            input: JSON.stringify({ tool_name: 'apply_patch', cwd: dir, tool_input: { command: `*** Begin Patch\n${body}\n*** End Patch` } }),
+          }).status;
+          check(codexPatch('*** Update File: db/migrations/001_init.sql\n@@\n-x\n+y') === 2, `${label}: apply_patch editing an existing migration must be blocked`);
+          check(codexPatch('*** Delete File: db/migrations/001_init.sql') === 2, `${label}: apply_patch deleting a migration must be blocked`);
+          check(codexPatch('*** Update File: db/migrations/001_init.sql\n*** Move to: db/old.sql') === 2, `${label}: apply_patch moving a migration must be blocked`);
+          check(codexPatch('*** Add File: db/migrations/003_next.sql\n+-- y') === 0, `${label}: apply_patch adding a new migration must be allowed`);
+          check(codexPatch('*** Update File: src/app.ts\n@@\n-a\n+b') === 0, `${label}: apply_patch on ordinary files must not be blocked`);
 
           fs.writeFileSync(path.join(dir, 'docs', 'broken.md'), '[x](nope.md) /Users/someone/project/\n');
           const bad = run('bash', ['scripts/check-freshness.sh'], { cwd: dir });

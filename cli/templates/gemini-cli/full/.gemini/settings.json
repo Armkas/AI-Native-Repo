@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "write_file|replace",
+        "hooks": [
+          {
+            "type": "command",
+            "name": "guard-paths",
+            "description": "Block edits to read-only / append-only paths (.agents/guardrails/protected-paths.txt)",
+            "command": "bash \"$GEMINI_PROJECT_DIR/scripts/guard-paths.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}

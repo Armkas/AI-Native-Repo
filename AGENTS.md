@@ -40,7 +40,8 @@ Before modifying any content, identify the required context area:
    - `common/` (`light/`, `standard/`, `full/`)
    - `runtimes/` (`claude-code/`, `codex/`, `cursor/`, `gemini-cli/`)
    - Layering: `full` = `common/standard` + `common/full`; runtime files = `runtimes/<rt>/base` + tier overlays. Language variants (`*.zh-CN.md`) replace the base file at `anr init --lang`; they must link to base filenames.
-   - Canonical skills live in `common/<tier>/.agents/skills/`; runtimes get a symlink at init, never a copy in `template-source/`.
+   - Canonical skills live in `common/<tier>/.agents/skills/`. Codex, Cursor and Gemini CLI read `.agents/skills/` natively; only Claude Code gets a `.claude/skills` symlink at init. Never keep a copy in `template-source/`.
+   - Guardrail logic lives once in `common/full/scripts/guard-paths.sh`; runtime overlays only wire it (`.claude/settings.json`, `.gemini/settings.json`, `.codex/hooks.json`). Runtime facts in `spec/adapters.md` carry a review date — re-verify against official docs before changing them.
    - Generated output for the CLI lives in `cli/templates/` — never hand-edit it, run `scripts/generate-templates.js` instead.
 7. **Reference Implementations**: [examples/](examples/) (`claude-code/`, `codex/`, `cursor/`, `gemini-cli/`)
 

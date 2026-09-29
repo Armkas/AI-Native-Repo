@@ -91,7 +91,21 @@ else
     check_file "cli/templates/cursor/standard/.cursor/rules/core.mdc"
     check_file "cli/templates/claude-code/standard/.agents/skills/verify/SKILL.md"
     check_file "cli/templates/claude-code/full/scripts/check-freshness.sh"
+    check_file "cli/templates/claude-code/full/.claude/settings.json"
+    check_file "cli/templates/gemini-cli/full/.gemini/settings.json"
+    check_file "cli/templates/codex/full/.codex/hooks.json"
 fi
+
+# Every runtime config (hooks, permissions, MCP) must be valid JSON, or the runtime silently ignores it.
+echo "--- JSON Config Checks ---"
+while IFS= read -r f; do
+    if node -e "JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8'))" "$f" 2>/dev/null; then
+        echo "✅ PASS: $f is valid JSON."
+    else
+        echo "❌ FAIL: $f is not valid JSON."
+        FAILS=$((FAILS+1))
+    fi
+done < <(find template-source examples -name '*.json' -not -path '*/node_modules/*')
 
 # 3. End-to-end scaffold tests (links, skills, guardrails for every runtime × tier × language)
 echo "--- Scaffold Tests ---"

@@ -1,0 +1,17 @@
+{
+  "description": "Block edits to read-only / append-only paths (.agents/guardrails/protected-paths.txt)",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/scripts/guard-paths.sh\"",
+            "statusMessage": "Checking protected paths"
+          }
+        ]
+      }
+    ]
+  }
+}
