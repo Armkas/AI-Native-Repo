@@ -3,8 +3,8 @@
   "version": "1.1.5",
   "description": "Scaffolding tool for the AI-Native Repository Standard",
   "bin": {
-    "anr": "./bin/anr.js",
-    "ai-native-repo": "./bin/anr.js"
+    "anr": "bin/anr.js",
+    "ai-native-repo": "bin/anr.js"
   },
   "scripts": {
     "start": "node ./bin/anr.js",
