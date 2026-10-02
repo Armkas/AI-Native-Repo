@@ -168,12 +168,14 @@ async function initCommand(args) {
   let tier = '';
   let lang = 'en';
   let isDryRun = false;
+  let isForce = false;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--runtime') runtime = args[++i];
     else if (args[i] === '--tier') tier = args[++i];
     else if (args[i] === '--lang') lang = args[++i];
     else if (args[i] === '--dry-run') isDryRun = true;
+    else if (args[i] === '--force') isForce = true;
     else if (!args[i].startsWith('-')) target = args[i];
   }
 
@@ -218,109 +220,83 @@ async function initCommand(args) {
     process.exit(1);
   }
 
-  let hasConflict = false;
+  // Preflight: Collect all file actions to prevent partial writes if conflicts exist
+  const actions = collectFileActions(templateDir, targetDir, lang, isForce);
 
-  // Resolve which source file provides each output file: `X.<lang>.md` replaces `X.md` for the
-  // selected language, other language variants are dropped. The consumer gets one entry point per
-  // concept, never AGENTS.md next to AGENTS.zh-CN.md.
-  function plan(srcDir) {
-    const out = new Map();
-    for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
-      if (entry.isDirectory()) continue;
-      const m = entry.name.match(VARIANT_RE);
-      if (m) {
-        if (m[2] === lang) out.set(m[1] + m[3], entry.name);
-      } else if (!out.has(entry.name)) {
-        out.set(entry.name, entry.name);
-      }
-    }
-    return out;
-  }
-
-  // Recursive copy with conflict detection
-  function copyDir(src, dest) {
-    if (!fs.existsSync(dest)) {
-      if (!isDryRun) fs.mkdirSync(dest, { recursive: true });
-    }
-    for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-      if (entry.isDirectory()) copyDir(path.join(src, entry.name), path.join(dest, entry.name));
-    }
-    for (const [outName, srcName] of plan(src)) {
-      const srcPath = path.join(src, srcName);
-      const destPath = path.join(dest, outName);
-      if (fs.existsSync(destPath)) {
-        const srcContent = fs.readFileSync(srcPath, 'utf8');
-        const destContent = fs.readFileSync(destPath, 'utf8');
-        if (srcContent === destContent) {
-          console.log(`  Skip     : ${path.relative(targetDir, destPath)} (identical)`);
-        } else {
-          console.log(`  Conflict : ${path.relative(targetDir, destPath)} already exists! Skipping...`);
-          hasConflict = true;
-        }
-      } else {
-        console.log(`  Create   : ${path.relative(targetDir, destPath)}`);
-        if (!isDryRun) {
-          fs.copyFileSync(srcPath, destPath);
-          fs.chmodSync(destPath, fs.statSync(srcPath).mode);
-        }
-      }
-    }
-  }
-
-  // Point the runtime's native skills directory at the canonical .agents/skills/ (one copy of truth).
-  // Falls back to a copy where symlinks are unavailable (e.g. Windows without developer mode).
-  function linkSkills() {
-    const linkRel = SKILL_LINKS[runtime];
-    if (!linkRel || !fs.existsSync(path.join(templateDir, '.agents', 'skills'))) return;
-    const linkPath = path.join(targetDir, linkRel);
-    const canonical = path.join(targetDir, '.agents', 'skills');
-    const relTarget = path.relative(path.dirname(linkPath), canonical);
-
-    if (isSymlink(linkPath)) {
-      try {
-        const currentTarget = fs.readlinkSync(linkPath);
-        if (currentTarget === relTarget) {
-          console.log(`  Skip     : ${linkRel} (already correctly linked)`);
-          return;
-        } else {
-          console.log(`  Relink   : ${linkRel} was pointing to '${currentTarget}', fixing to '${relTarget}'`);
-          if (!isDryRun) {
-            fs.unlinkSync(linkPath);
-            fs.symlinkSync(relTarget, linkPath, 'dir');
-          }
-          return;
-        }
-      } catch (err) {
-        if (!isDryRun) {
-          try { fs.unlinkSync(linkPath); } catch {}
-        }
-      }
-    } else if (fs.existsSync(linkPath)) {
-      console.log(`  Skip     : ${linkRel} (already exists as concrete directory)`);
-      return;
-    }
-
-    console.log(`  Link     : ${linkRel} -> ${relTarget}`);
-    if (isDryRun) return;
-    fs.mkdirSync(path.dirname(linkPath), { recursive: true });
-    try {
-      fs.symlinkSync(relTarget, linkPath, 'dir');
-    } catch (err) {
-      fs.cpSync(canonical, linkPath, { recursive: true });
-      console.log(`  Note     : symlinks unavailable, copied instead — keep ${linkRel} in sync with .agents/skills/`);
-    }
-  }
-
-  function isSymlink(p) {
-    try { return fs.lstatSync(p).isSymbolicLink(); } catch { return false; }
-  }
-
-  copyDir(templateDir, targetDir);
-  linkSkills();
-  
-  // Write the manifest
+  // Check manifest
   const manifestPath = path.join(targetDir, 'anr.yaml');
-  const manifestContent = [
+  const manifestContent = generateManifest(runtime, tier, lang);
+  if (fs.existsSync(manifestPath)) {
+    const existing = fs.readFileSync(manifestPath, 'utf8');
+    if (existing === manifestContent) {
+      actions.push({ type: 'SKIP', relPath: 'anr.yaml', reason: 'identical' });
+    } else {
+      actions.push({
+        type: isForce ? 'OVERWRITE' : 'CONFLICT',
+        relPath: 'anr.yaml',
+        srcContent: manifestContent,
+        destPath: manifestPath
+      });
+    }
+  } else {
+    actions.push({
+      type: 'CREATE',
+      relPath: 'anr.yaml',
+      srcContent: manifestContent,
+      destPath: manifestPath
+    });
+  }
+
+  // Detect conflicts
+  const conflicts = actions.filter(a => a.type === 'CONFLICT');
+  if (conflicts.length > 0) {
+    console.error(`\n❌ Initialization aborted: ${conflicts.length} conflicting files already exist with different content:`);
+    conflicts.forEach(c => console.error(`  ! ${c.relPath}`));
+    console.error(`\nNo files were written to prevent a partial state.`);
+    console.error(`Options:`);
+    console.error(`  - Pass --force to overwrite existing files`);
+    console.error(`  - Run 'anr update' to upgrade an existing AI-Native repository`);
+    process.exit(2);
+  }
+
+  // Execution Phase: Write files cleanly
+  for (const act of actions) {
+    if (act.type === 'SKIP') {
+      console.log(`  Skip     : ${act.relPath} (${act.reason || 'identical'})`);
+    } else if (act.type === 'OVERWRITE') {
+      console.log(`  Overwrite: ${act.relPath}`);
+      if (!isDryRun) {
+        fs.mkdirSync(path.dirname(act.destPath), { recursive: true });
+        if (act.srcContent !== undefined) {
+          fs.writeFileSync(act.destPath, act.srcContent);
+        } else {
+          fs.copyFileSync(act.srcPath, act.destPath);
+          fs.chmodSync(act.destPath, fs.statSync(act.srcPath).mode);
+        }
+      }
+    } else if (act.type === 'CREATE') {
+      console.log(`  Create   : ${act.relPath}`);
+      if (!isDryRun) {
+        fs.mkdirSync(path.dirname(act.destPath), { recursive: true });
+        if (act.srcContent !== undefined) {
+          fs.writeFileSync(act.destPath, act.srcContent);
+        } else {
+          fs.copyFileSync(act.srcPath, act.destPath);
+          fs.chmodSync(act.destPath, fs.statSync(act.srcPath).mode);
+        }
+      }
+    }
+  }
+
+  linkSkills(targetDir, runtime, templateDir, isDryRun, isForce);
+
+  if (!isDryRun) {
+    console.log(`\n✅ Success! Your repository is now an AI-Native workspace.`);
+  }
+}
+
+function generateManifest(runtime, tier, lang) {
+  return [
     `schema_version: "2.0"`,
     `repository:`,
     `  kind: "consumer-repository"`,
@@ -336,24 +312,223 @@ async function initCommand(args) {
     `template:`,
     `  version: "${CLI_VERSION}"`
   ].join('\n') + '\n';
+}
 
-  if (fs.existsSync(manifestPath)) {
-     if (fs.readFileSync(manifestPath, 'utf8') === manifestContent) {
-       console.log(`  Skip     : anr.yaml (identical)`);
-     } else {
-       console.log(`  Conflict : anr.yaml already exists! Skipping...`);
-       hasConflict = true;
-     }
-  } else {
-     console.log(`  Create   : anr.yaml (Machine-readable manifest)`);
-     if (!isDryRun) fs.writeFileSync(manifestPath, manifestContent);
+function planLanguageFiles(srcDir, lang) {
+  const out = new Map();
+  for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
+    if (entry.isDirectory()) continue;
+    const m = entry.name.match(VARIANT_RE);
+    if (m) {
+      if (m[2] === lang) out.set(m[1] + m[3], entry.name);
+    } else if (!out.has(entry.name)) {
+      out.set(entry.name, entry.name);
+    }
+  }
+  return out;
+}
+
+function collectFileActions(srcDir, destDir, lang, isForce, relBase = '') {
+  const actions = [];
+  const entries = fs.readdirSync(srcDir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      actions.push(...collectFileActions(
+        path.join(srcDir, entry.name),
+        path.join(destDir, entry.name),
+        lang,
+        isForce,
+        path.join(relBase, entry.name)
+      ));
+    }
   }
 
-  if (!isDryRun) console.log(`\n✅ Success! Your repository is now an AI-Native workspace.`);
-  
-  if (hasConflict) {
-    console.log(`\n⚠️ Note: Some files were skipped due to conflicts. Please review them manually.`);
-    process.exit(2);
+  for (const [outName, srcName] of planLanguageFiles(srcDir, lang)) {
+    const srcPath = path.join(srcDir, srcName);
+    const destPath = path.join(destDir, outName);
+    const relPath = path.join(relBase, outName);
+
+    if (fs.existsSync(destPath)) {
+      const srcContent = fs.readFileSync(srcPath, 'utf8');
+      const destContent = fs.readFileSync(destPath, 'utf8');
+      if (srcContent === destContent) {
+        actions.push({ type: 'SKIP', srcPath, destPath, relPath, reason: 'identical' });
+      } else {
+        actions.push({ type: isForce ? 'OVERWRITE' : 'CONFLICT', srcPath, destPath, relPath });
+      }
+    } else {
+      actions.push({ type: 'CREATE', srcPath, destPath, relPath });
+    }
+  }
+
+  return actions;
+}
+
+function isSymlink(p) {
+  try { return fs.lstatSync(p).isSymbolicLink(); } catch { return false; }
+}
+
+function linkSkills(targetDir, runtime, templateDir, isDryRun, isForce) {
+  const linkRel = SKILL_LINKS[runtime];
+  if (!linkRel || !fs.existsSync(path.join(templateDir, '.agents', 'skills'))) return;
+  const linkPath = path.join(targetDir, linkRel);
+  const canonical = path.join(targetDir, '.agents', 'skills');
+  const relTarget = path.relative(path.dirname(linkPath), canonical);
+
+  if (isSymlink(linkPath)) {
+    try {
+      const currentTarget = fs.readlinkSync(linkPath);
+      if (currentTarget === relTarget) {
+        console.log(`  Skip     : ${linkRel} (already correctly linked)`);
+        return;
+      } else {
+        console.log(`  Relink   : ${linkRel} was pointing to '${currentTarget}', fixing to '${relTarget}'`);
+        if (!isDryRun) {
+          fs.unlinkSync(linkPath);
+          fs.symlinkSync(relTarget, linkPath, 'dir');
+        }
+        return;
+      }
+    } catch (err) {
+      if (!isDryRun) {
+        try { fs.unlinkSync(linkPath); } catch {}
+      }
+    }
+  } else if (fs.existsSync(linkPath)) {
+    if (isForce) {
+      console.log(`  Relink   : Replacing concrete directory ${linkRel} with symlink -> ${relTarget}`);
+      if (!isDryRun) {
+        fs.rmSync(linkPath, { recursive: true, force: true });
+        fs.symlinkSync(relTarget, linkPath, 'dir');
+      }
+      return;
+    } else {
+      console.log(`  Warning  : ${linkRel} exists as a concrete directory instead of a symlink.`);
+      console.log(`             To prevent copy drift, use --force to link to ${canonical}`);
+      return;
+    }
+  }
+
+  console.log(`  Link     : ${linkRel} -> ${relTarget}`);
+  if (isDryRun) return;
+  fs.mkdirSync(path.dirname(linkPath), { recursive: true });
+  try {
+    fs.symlinkSync(relTarget, linkPath, 'dir');
+  } catch (err) {
+    fs.cpSync(canonical, linkPath, { recursive: true });
+    console.log(`  Note     : symlinks unavailable, copied instead — keep ${linkRel} in sync with .agents/skills/`);
+  }
+}
+
+async function updateCommand(args) {
+  let target = '.';
+  let isDryRun = false;
+  let isForce = false;
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--dry-run') isDryRun = true;
+    else if (args[i] === '--force') isForce = true;
+    else if (!args[i].startsWith('-')) target = args[i];
+  }
+
+  const targetDir = path.resolve(process.cwd(), target);
+  const manifestPath = path.join(targetDir, 'anr.yaml');
+
+  if (!fs.existsSync(manifestPath)) {
+    console.error(`❌ Error: No anr.yaml manifest found at ${targetDir}`);
+    console.error(`   Run 'anr init' to initialize an AI-Native repository first.`);
+    process.exit(1);
+  }
+
+  const manifestText = fs.readFileSync(manifestPath, 'utf8');
+  const runtimeMatch = manifestText.match(/runtime:\s*\n\s*name:\s*["']?([^"'\n]+)/) || manifestText.match(/name:\s*["']?([^"'\n]+)/);
+  const tierMatch = manifestText.match(/tier:\s*["']?([^"'\n]+)/);
+  const langMatch = manifestText.match(/language:\s*["']?([^"'\n]+)/);
+  const versionMatch = manifestText.match(/version:\s*["']?([^"'\n]+)/);
+
+  const runtime = runtimeMatch ? runtimeMatch[1].trim() : 'claude-code';
+  const tier = tierMatch ? tierMatch[1].trim() : 'standard';
+  const lang = langMatch ? langMatch[1].trim() : 'en';
+  const currentVersion = versionMatch ? versionMatch[1].trim() : 'unknown';
+
+  const templateDir = path.join(__dirname, '..', 'templates', runtime, tier);
+  if (!fs.existsSync(templateDir)) {
+    console.error(`❌ Error: Template for runtime '${runtime}' and tier '${tier}' not found at ${templateDir}.`);
+    process.exit(1);
+  }
+
+  console.log(`\nUpdating AI-Native Repository...`);
+  console.log(`Target   : ${targetDir}`);
+  console.log(`Runtime  : ${runtime}`);
+  console.log(`Tier     : ${tier}`);
+  console.log(`Language : ${lang}`);
+  console.log(`Version  : ${currentVersion} -> ${CLI_VERSION}`);
+  if (isDryRun) console.log(`[DRY RUN] No files will be written.\n`);
+
+  function isInfrastructure(relPath) {
+    if (relPath.startsWith('.agents/skills/') ||
+        relPath.startsWith('.claude/') ||
+        relPath.startsWith('.cursor/hooks') ||
+        relPath.startsWith('.codex/hooks') ||
+        relPath.startsWith('.gemini/settings') ||
+        relPath.startsWith('scripts/')) {
+      return true;
+    }
+    return false;
+  }
+
+  const actions = collectFileActions(templateDir, targetDir, lang, isForce);
+  let added = 0;
+  let updated = 0;
+  let skipped = 0;
+  let review = 0;
+
+  for (const act of actions) {
+    if (act.type === 'SKIP') {
+      skipped++;
+      continue;
+    }
+    if (act.type === 'CREATE') {
+      console.log(`  + Add    : ${act.relPath}`);
+      if (!isDryRun) {
+        fs.mkdirSync(path.dirname(act.destPath), { recursive: true });
+        fs.copyFileSync(act.srcPath, act.destPath);
+        fs.chmodSync(act.destPath, fs.statSync(act.srcPath).mode);
+      }
+      added++;
+    } else if (act.type === 'OVERWRITE' || act.type === 'CONFLICT') {
+      if (isInfrastructure(act.relPath) || isForce) {
+        console.log(`  ~ Update : ${act.relPath}`);
+        if (!isDryRun) {
+          fs.copyFileSync(act.srcPath, act.destPath);
+          fs.chmodSync(act.destPath, fs.statSync(act.srcPath).mode);
+        }
+        updated++;
+      } else {
+        console.log(`  ! Review : ${act.relPath} (customized locally, preserved; use --force to overwrite)`);
+        review++;
+      }
+    }
+  }
+
+  linkSkills(targetDir, runtime, templateDir, isDryRun, isForce);
+
+  if (!isDryRun) {
+    const updatedManifest = manifestText.replace(/version:\s*["']?[^"'\n]+["']?/, `version: "${CLI_VERSION}"`);
+    fs.writeFileSync(manifestPath, updatedManifest);
+    console.log(`  ~ Update : anr.yaml (template version -> ${CLI_VERSION})`);
+  }
+
+  console.log(`\nUpdate Summary:`);
+  console.log(`  + Added   : ${added} files`);
+  console.log(`  ~ Updated : ${updated} files`);
+  console.log(`  = In Sync : ${skipped} files`);
+  if (review > 0) {
+    console.log(`  ! Review  : ${review} user-modified files preserved (use --force to overwrite)`);
+  }
+  if (!isDryRun) {
+    console.log(`\n🎉 Repository updated to AI-Native Standard v2.0 (CLI v${CLI_VERSION})!`);
   }
 }
 
@@ -362,5 +537,7 @@ module.exports = {
   listCommand,
   doctorCommand,
   validateCommand,
-  initCommand
+  initCommand,
+  updateCommand
 };
+

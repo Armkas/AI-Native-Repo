@@ -669,9 +669,9 @@ L5 只读那一处实现
 
 `anr index`（计划中）：自动提取符号与拓扑，生成 `context-index.md`、`symbol-index.md`、`dependency-map.md`。
 
-## 54. 提供初始化与脚手架能力
+## 54. 提供初始化与演化更新能力
 
-`anr init`（当前）：交互式或参数化一键搭建 12 套模板矩阵，生成 `AGENTS.md`、`.agents/`、`docs/`，让任何项目立即拥有 AI-Native 原生结构。
+`anr init` 与 `anr update`（当前）：交互式或参数化一键搭建 12 套模板矩阵，安全同步技能与防御钩子基础设施，让任何项目立即拥有 AI-Native 原生结构并平滑演化。
 
 ---
 

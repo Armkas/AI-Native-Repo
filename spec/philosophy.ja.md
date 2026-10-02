@@ -651,9 +651,9 @@ iOS のみ:   docs/ ios/
 
 `anr index`（計画中）：`context-index.md`、`symbol-index.md`、`dependency-map.md` を自動生成。
 
-## 54. 初期化機能を提供する
+## 54. 初期化とアップデート機能を提供する
 
-`anr init`（実装済み）：12種類のテンプレートマトリックスから `AGENTS.md`、`.agents/`、`docs/` をスキャフォールドし、あらゆるプロジェクトを即座に AI-Native 構造へ移行。
+`anr init` / `anr update`（実装済み）：12種類のテンプレートマトリックスから `AGENTS.md`、`.agents/`、`docs/` をスキャフォールドし、インフラを安全に同期。あらゆるプロジェクトを即座に AI-Native 構造へ移行・進化させる。
 
 ---
 

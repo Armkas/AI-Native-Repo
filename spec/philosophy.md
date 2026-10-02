@@ -669,9 +669,9 @@ Human: why, intent, business rules, architecture decisions.
 
 `anr index` (Planned): generate `context-index.md`, `symbol-index.md`, and `dependency-map.md`.
 
-## 53. Provide an init capability
+## 53. Provide an init and update capability
 
-`anr init` (Current): scaffold `AGENTS.md`, `.agents/`, `docs/` across 12 template combinations so any project can adopt the AI-Native structure immediately.
+`anr init` & `anr update` (Current): scaffold and synchronize `AGENTS.md`, `.agents/`, `docs/` across 12 template combinations so any project can adopt and evolve the AI-Native structure without drift.
 
 ---
 

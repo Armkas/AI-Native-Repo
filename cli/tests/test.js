@@ -173,6 +173,58 @@ try {
       }
     }
   }
+
+  // --- CLI Command & Lifecycle Suite ---
+  const cliTestDir = path.join(tmpRoot, 'cli-test-suite');
+  fs.mkdirSync(cliTestDir, { recursive: true });
+
+  // 1. Version, List, Doctor
+  const ver = run('node', [BIN, 'version']);
+  check(ver.status === 0 && ver.stdout.includes('Standard Version: 2.0'), 'anr version should report standard 2.0');
+  const lst = run('node', [BIN, 'list']);
+  check(lst.status === 0 && lst.stdout.includes('claude-code') && lst.stdout.includes('standard'), 'anr list should show runtimes and tiers');
+  const doc = run('node', [BIN, 'doctor'], { cwd: cliTestDir });
+  check(doc.status === 0, 'anr doctor should exit 0');
+
+  // 2. Dry Run: Must cause ZERO filesystem mutations
+  const dryDir = path.join(cliTestDir, 'dry-run-target');
+  fs.mkdirSync(dryDir, { recursive: true });
+  const dry = run('node', [BIN, 'init', dryDir, '--runtime', 'cursor', '--tier', 'light', '--lang', 'en', '--dry-run']);
+  check(dry.status === 0, 'init --dry-run should exit 0');
+  check(fs.readdirSync(dryDir).length === 0, 'init --dry-run must write ZERO files to disk');
+
+  // 3. Preflight Atomic Conflict: No partial writes when conflict exists
+  const conflictDir = path.join(cliTestDir, 'conflict-target');
+  fs.mkdirSync(conflictDir, { recursive: true });
+  fs.writeFileSync(path.join(conflictDir, 'AGENTS.md'), '# Conflicting AGENTS file\n');
+  const conflictRun = run('node', [BIN, 'init', conflictDir, '--runtime', 'cursor', '--tier', 'light', '--lang', 'en']);
+  check(conflictRun.status === 2, 'init on conflicting target must exit with code 2');
+  const filesAfterConflict = fs.readdirSync(conflictDir);
+  check(filesAfterConflict.length === 1 && filesAfterConflict[0] === 'AGENTS.md',
+    'init on conflict must abort cleanly without writing partial template files');
+
+  // 4. Force Overwrite: Overwrites conflict cleanly
+  const forceRun = run('node', [BIN, 'init', conflictDir, '--runtime', 'cursor', '--tier', 'light', '--lang', 'en', '--force']);
+  check(forceRun.status === 0, 'init --force on conflicting target must succeed with exit 0');
+  check(fs.readdirSync(conflictDir).length > 1, 'init --force should scaffold all files');
+
+  // 5. Update / Sync Lifecycle: Updates infrastructure cleanly
+  const updateDir = path.join(cliTestDir, 'update-target');
+  fs.mkdirSync(updateDir, { recursive: true });
+  run('node', [BIN, 'init', updateDir, '--runtime', 'claude-code', '--tier', 'standard', '--lang', 'en']);
+  // Simulate an older template version
+  const updateManifest = path.join(updateDir, 'anr.yaml');
+  fs.writeFileSync(updateManifest, fs.readFileSync(updateManifest, 'utf8').replace(/version:\s*"[^"]+"/, 'version: "1.0.0"'));
+  
+  // Dry run update: ensures zero mutations
+  const updateDry = run('node', [BIN, 'update', updateDir, '--dry-run']);
+  check(updateDry.status === 0, 'anr update --dry-run should exit 0');
+  check(fs.readFileSync(updateManifest, 'utf8').includes('version: "1.0.0"'), 'update --dry-run must not modify manifest');
+
+  // Real update: updates version and succeeds
+  const updateReal = run('node', [BIN, 'update', updateDir]);
+  check(updateReal.status === 0, 'anr update should exit 0');
+  check(!fs.readFileSync(updateManifest, 'utf8').includes('version: "1.0.0"'), 'anr update should update template version');
 } finally {
   fs.rmSync(tmpRoot, { recursive: true, force: true });
 }
