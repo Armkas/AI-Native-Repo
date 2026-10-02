@@ -25,6 +25,16 @@ The goal is:
 
 > **Let the AI understand the entire project without reading all of it.**
 
+## The Meta-Architecture: Agent Runtime (OS) vs. Repository Asset (Filesystem)
+
+A fundamental distinction in modern agentic software engineering:
+
+> **"Vendors standardize how AI enters the repository. ANR standardizes how the repository is architected as a durable engineering asset for AI agents."**
+
+- **Vendor Runtimes (Claude Code, OpenAI Codex, Cursor, Gemini CLI, GitHub Copilot)** provide the execution environment: context window APIs, model invocation, tool calling mechanisms, and runtime hook triggers. They act as the **Operating System**.
+- **Agent Skills Open Standard (`.agents/skills/`)** provides portable, repeatable procedural capabilities across agents. They act as **Standard Utilities**.
+- **AI-Native Repository Standard (ANR)** governs how repository knowledge, contracts, invariants, and boundaries are structured, discovered, and audited over time. It defines the **Filesystem layout and engineering governance**.
+
 ## Two planes: AI Context Architecture + Software Architecture
 
 AI-Native Repo is **not** a new MVC, and not “AI-MVVM”. Traditional architecture is not obsolete.

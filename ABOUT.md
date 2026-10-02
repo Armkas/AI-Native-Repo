@@ -1,6 +1,6 @@
 # About AI-Native Repository Standard (ANR)
 
-> **"Don't just give AI more context. Give it a native workspace."**
+> **"Vendors standardize how AI enters the repository. ANR standardizes how the repository is architected as a durable engineering asset for AI agents."**
 
 ---
 

@@ -1,10 +1,34 @@
-# AI-Native Repository Standard
+# AI-Native Repository Standard & Reference Implementation
 
 [🇺🇸 English](README.md) | [🇨🇳 简体中文](README.zh-CN.md) | [🇹🇼 繁體中文](README.zh-TW.md) | [🇯🇵 日本語](README.ja.md) | [🇪🇸 Español](README.es.md) | [🇫🇷 Français](README.fr.md) | [🇩🇪 Deutsch](README.de.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇧🇷 Português](README.pt-BR.md) | [🇰🇷 한국어](README.ko.md) | [🇮🇳 हिन्दी](README.hi.md) | [🇸🇦 العربية](README.ar.md)
 
-> **Don't just give AI more context. Give it a native workspace.**
+> **"Vendors standardize how AI enters the repository. ANR standardizes how the repository is architected as a durable engineering asset for AI agents."**
 
-A standard, CLI scaffold, and reference architecture for building repositories that AI coding agents can understand, navigate, modify, and verify autonomously.
+A cross-agent standard, reference architecture, and lifecycle governance platform for structuring, verifying, and maintaining AI-friendly software repositories.
+
+---
+
+## 🤔 Do You Need ANR? (Two Paths to an AI-Friendly Repo)
+
+**You do NOT need to install ANR to build an AI-friendly repository.**  
+Modern agent runtimes (Claude Code, OpenAI Codex, Cursor, Gemini CLI, Copilot) already provide native instructions, hooks, and skills. ANR cleanly separates **Runtime Execution (the Agent's Operating System)** from **Repository Context Architecture & Governance (the Codebase's durable engineering layout)**.
+
+### Path A: Zero-Tooling Manual Setup (Recommended for solo developers & prototypes)
+If you maintain a personal project or small repository, you don't need any external CLI. Simply adopt the core ANR architectural principles:
+1. **Minimal Global Router**: Keep an `AGENTS.md` (or `CLAUDE.md`, `GEMINI.md`) in the root capped at a `<= 2048 bytes` budget. It acts as an air traffic controller, routing to context rather than stuffing the entire project encyclopedia into prompt memory.
+2. **Modular Workflows via Agent Skills**: Place repeatable procedural actions into the open [Agent Skills](https://agentskills.io) standard format at `.agents/skills/<skill-name>/SKILL.md`.
+3. **Structured Domain & Contract Layers**: Move architecture and domain knowledge into `docs/domains/`, and database schemas / API schemas into `docs/contracts/`.
+4. **Task-Relevant Progressive Disclosure**: Ensure agents only read documentation relevant to their current task.
+5. **Deterministic Verification**: Define explicit test and build commands that must pass before an agent claims work is "done".
+6. **Enforceable Human Boundaries**: Guard sensitive configurations or release scripts with hooks or CI checks.
+
+---
+
+### Path B: The Standardized Lifecycle Platform (ANR CLI — For teams & multi-agent environments)
+When managing production systems across teams or multiple AI agents, ANR provides an audited, automated lifecycle framework:
+- **Cross-Agent Portability**: Map one single source of semantic truth (`docs/`, `.agents/skills/`) cleanly across Claude Code, Codex, Cursor, and Gemini CLI without duplicating rules.
+- **Multi-Repo Governance**: Enforce consistent structural standards, contracts, and human-in-the-loop permission boundaries across tens of microservices or libraries.
+- **Day-2 Lifecycle Management**: Use `anr update` with ownership-aware JSON deep merge and `--prune` obsolete detection, and run `anr doctor` to continuously audit against link rot, skill non-compliance, and context bloat.
 
 ---
 

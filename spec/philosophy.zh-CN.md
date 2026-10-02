@@ -24,6 +24,16 @@
 
 > **让 AI 在不读完整个项目的情况下，仍然能够正确理解整个项目。**
 
+## 元架构：Agent Runtime (操作系统) vs. 仓库工程资产 (文件系统)
+
+现代智能体编程中一个至关重要的分水岭：
+
+> **“厂商解决的是 AI 如何进入代码库；ANR 标准化的是代码库本身应当如何设计，才能成为适合 AI 长期高效工作的工程资产。”**
+
+- **厂商 Runtime（Claude Code、OpenAI Codex、Cursor、Gemini CLI、GitHub Copilot）**：提供执行环境，包含模型调用、上下文窗口切片、工具调用以及钩子触发机制。它们充当**操作系统（OS）**。
+- **Agent Skills 开放标准（`.agents/skills/`）**：提供跨 Agent 统一便携、可重复调用的工作流与能力组件。它们充当**标准系统工具（Standard Utilities）**。
+- **AI-Native Repository Standard（ANR）**：规范代码库知识、领域契约、不变式与人机红线如何被结构化、按需发现、持续审计与安全升级。它定义的是**文件系统布局与工程资产治理（Filesystem & Governance）**。
+
 ## 两个平面：AI Context Architecture + Software Architecture
 
 AI-Native Repo **不是**新的 MVC，也不是「AI-MVVM」。传统架构并没有过时。

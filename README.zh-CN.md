@@ -1,10 +1,34 @@
-# AI-Native Repository Standard (AI-Native 仓库标准)
+# AI-Native Repository Standard & Reference Implementation (AI-Native 仓库标准与参考实现)
 
 [🇺🇸 English](README.md) | [🇨🇳 简体中文](README.zh-CN.md) | [🇹🇼 繁體中文](README.zh-TW.md) | [🇯🇵 日本語](README.ja.md) | [🇪🇸 Español](README.es.md) | [🇫🇷 Français](README.fr.md) | [🇩🇪 Deutsch](README.de.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇧🇷 Português](README.pt-BR.md) | [🇰🇷 한국어](README.ko.md) | [🇮🇳 हिन्दी](README.hi.md) | [🇸🇦 العربية](README.ar.md)
 
-> **不要只是给 AI 提供更多的上下文，给它一个原生的工作区。**
+> **“厂商解决的是 AI 如何进入代码库；ANR 标准化的是代码库本身应当如何设计，才能成为适合 AI 长期高效工作的工程资产。”**
 
-这是一个标准、命令行脚手架和参考架构，旨在构建让 AI 编程智能体（Agents）能够自主理解、导航、修改和验证的代码仓库。
+一套跨 Agent 的工程规范、参考架构与生命周期治理平台，用于组织、验证和长期维护对 AI 友好的软件仓库。
+
+---
+
+## 🤔 你需要 ANR 吗？（两种路径选择）
+
+**你并不必须安装 ANR 才能构建对 AI 友好的仓库。**  
+现代 Agent 运行时（Claude Code、OpenAI Codex、Cursor、Gemini CLI、Copilot）已经原生提供了 instructions、rules、hooks 与 skills 机制。ANR 的核心思想在于将**运行时能力（Runtime Capabilities，各家怎么读指令与调工具）**与**仓库语义架构及治理（Repository Context Architecture & Governance，代码库资产怎么组织）**严格解耦。
+
+### 路径 A：零工具手工极简方案 (Minimum Manual Setup — 适合个人与小型原型)
+如果你只有一个轻量仓库或个人项目，完全不需要安装任何额外 CLI，只需遵循本标准的核心设计原则：
+1. **全局路由极轻量**：在根目录放置一个遵循预算 `<= 2048 bytes (2 KiB)` 的 `AGENTS.md`（或 `CLAUDE.md` / `GEMINI.md`），充当空中交通管制员，只做路由，绝不把整个项目百科塞进提示词内存。
+2. **任务工作流模块化**：可复用的专项操作写成开放标准的 [Agent Skills](https://agentskills.io) 放入 `.agents/skills/<skill-name>/SKILL.md`。
+3. **领域与契约结构化**：将业务架构与模块划分放入 `docs/domains/`，接口与数据表契约放入 `docs/contracts/`。
+4. **上下文渐进式展开**：让 Agent 仅在执行对应任务时按需读取相关路径。
+5. **确定性验收**：定义严谨的构建与测试命令，宣称完成前必须实测通过。
+6. **可执行的人类边界**：核心敏感配置或生产发布脚本通过 hook 或 CI 阻断非授权篡改。
+
+---
+
+### 路径 B：标准化生命周期方案 (ANR Standard & CLI — 适合团队与多 Agent 协作)
+当你面临以下场景时，ANR 提供经过工程验证的标准范式与自动化生命周期保障：
+- **跨 Agent 协同与无缝迁移**：团队成员同时使用 Cursor、Claude Code、Codex 或 Gemini CLI，需要一套单一真实的语义资产与适配器映射，避免为每个工具重复手写一套规则。
+- **多仓库资产治理**：跨数十个微服务或库统一代码库规范、契约结构与人机权限边界，降低组织协作摩擦。
+- **Day 2 演进与维护**：通过 `anr update` 实现所有权感知的无损升级与 JSON 配置深度合并，通过 `anr doctor` 持续诊断死链与技能合规性，通过 `scripts/guard-paths.sh` 杜绝规则漂移。
 
 ---
 
