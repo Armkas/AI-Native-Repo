@@ -38,8 +38,8 @@ We define the **8-Pillar AI-Native Architecture** that sits alongside your tradi
 
 ## Rule 01 (Normative) — Minimal Global Router Budget
 The global router (`AGENTS.md`) **MUST** serve strictly as a pointer and directory router, and **MUST NOT** embed deep domain implementations, full schemas, or large documentation dumps.
-- To prevent instruction bloat and preserve attention, the router **MUST** adhere to an ANR design budget of **<= 2048 bytes (2 KiB)**.
-- Task-specific context **MUST** be loaded on-demand rather than injected into always-on prompt state.
+- Always-on context **MUST** be minimal. To prevent instruction bloat and preserve model attention, the router **MUST** adhere to an ANR design budget of **<= 2048 bytes (2 KiB)**.
+- Task-specific knowledge **SHOULD** be progressively disclosed according to the runtime's loading model (e.g., path-scoped rules, runtime-native skills, on-demand reference docs) rather than injected indiscriminately into always-on prompt state.
 
 ## Rule 02 (Heuristic) — Progressive Disclosure
 Context routing **SHOULD** follow a progressive disclosure pattern rather than a monolithic dump:

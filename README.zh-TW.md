@@ -2,7 +2,7 @@
 
 [🇺🇸 English](README.md) | [🇨🇳 简体中文](README.zh-CN.md) | [🇹🇼 繁體中文](README.zh-TW.md) | [🇯🇵 日本語](README.ja.md) | [🇪🇸 Español](README.es.md) | [🇫🇷 Français](README.fr.md) | [🇩🇪 Deutsch](README.de.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇧🇷 Português](README.pt-BR.md) | [🇰🇷 한국어](README.ko.md) | [🇮🇳 हिन्दी](README.hi.md) | [🇸🇦 العربية](README.ar.md)
 
-> **「廠商解決的是 AI 如何進入代碼庫；ANR 標準化的是代碼庫本身應當如何設計，才能成為適合 AI 長期高效工作的工程資產。」**
+> **「廠商在解決『AI 怎麼進入 Repo』，ANR 解決的是『Repo 本身應該怎樣被設計成適合 AI 長期工作的工程資產』。」**
 
 一套跨 Agent 的工程規範、參考架構與生命週期治理平台，用於組織、驗證和長期維護對 AI 友好的軟體倉庫。
 
@@ -54,7 +54,7 @@ CLI 會互動式地要求你從我們的 12-模板矩陣（4 種運行時 × 3 �
 **步驟 2：選擇你的複雜度層級**
 - `light`: 用於簡單腳本或原型的最基本上下文文件（PROJECT_MAP + 核心規則）。
 - `standard`: 默認選項。適用於生產服務的完整上下文、契約和規則架構。
-- `full`: 企業級。在 standard 基礎上增加路徑護欄（唯讀 / 僅追加檔案，由鉤子或 CI 強制執行）與上下文新鮮度檢查腳本。
+- `full`: 高成熟度確定性護欄。在 standard 基礎上增加路徑護欄（唯讀 / 僅追加檔案，由鉤子或 CI 強制執行）與上下文新鮮度檢查腳本。
 
 *或者，你可以通過參數跳過提示：*
 ```bash

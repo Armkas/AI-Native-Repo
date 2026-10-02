@@ -1,3 +1,5 @@
+const path = require('path');
+
 // Lightweight ANR Manifest Parser & Validator for anr.yaml
 // Supports standard ANR manifest subset: key-value maps, nested maps, block/flow sequences,
 // quote-escaped strings, and multi-line values.
@@ -172,6 +174,15 @@ function formatScalar(v) {
   return String(v);
 }
 
+function isSafeRelativePath(p) {
+  if (typeof p !== 'string' || !p.trim()) return false;
+  if (p.includes('\0')) return false;
+  if (path.isAbsolute(p) || /^[a-zA-Z]:[/\\]/.test(p) || p.startsWith('/') || p.startsWith('\\')) return false;
+  const parts = p.split(/[/\\]/);
+  if (parts.some(seg => seg === '..')) return false;
+  return true;
+}
+
 function validateManifest(manifest, catalog) {
   if (!manifest || typeof manifest !== 'object') {
     throw new Error('Manifest is not a valid object or empty.');
@@ -195,19 +206,30 @@ function validateManifest(manifest, catalog) {
   const langs = catalog.languages;
 
   if (kind === 'reference-repository') {
-    if (!manifest.reference || !manifest.reference.canonical_spec) {
-      throw new Error("Reference repository manifest missing 'reference.canonical_spec'.");
+    if (!manifest.reference || typeof manifest.reference !== 'object') {
+      throw new Error("Reference repository manifest missing 'reference' object.");
     }
-    if (!manifest.runtime || !Array.isArray(manifest.runtime.supported)) {
-      throw new Error("Reference repository manifest missing 'runtime.supported' list.");
+    const { canonical_spec, template_source, cli_source } = manifest.reference;
+    if (!isSafeRelativePath(canonical_spec)) {
+      throw new Error(`Invalid or missing 'reference.canonical_spec': expected safe relative path, got '${canonical_spec}'.`);
+    }
+    if (!isSafeRelativePath(template_source)) {
+      throw new Error(`Invalid or missing 'reference.template_source': expected safe relative path, got '${template_source}'.`);
+    }
+    if (!isSafeRelativePath(cli_source)) {
+      throw new Error(`Invalid or missing 'reference.cli_source': expected safe relative path, got '${cli_source}'.`);
+    }
+
+    if (!manifest.runtime || !Array.isArray(manifest.runtime.supported) || manifest.runtime.supported.length === 0) {
+      throw new Error("Reference repository manifest missing non-empty 'runtime.supported' list.");
     }
     for (const r of manifest.runtime.supported) {
       if (!runtimes.includes(r)) {
         throw new Error(`Unknown supported runtime '${r}'. Available: ${runtimes.join(', ')}`);
       }
     }
-    if (!manifest.verification || !manifest.verification.command) {
-      throw new Error("Reference repository manifest missing 'verification.command'.");
+    if (!manifest.verification || typeof manifest.verification.command !== 'string' || !manifest.verification.command.trim()) {
+      throw new Error("Reference repository manifest missing non-empty 'verification.command'.");
     }
     return { kind: 'reference' };
   }
@@ -229,12 +251,46 @@ function validateManifest(manifest, catalog) {
     throw new Error(`Unknown runtime.language '${rLang}'. Available: ${langs.join(', ')}`);
   }
 
+  // Strict entrypoints validation
   if (!manifest.entrypoints || typeof manifest.entrypoints !== 'object') {
     throw new Error("Consumer repository manifest missing 'entrypoints' declaration.");
   }
+  const requiredEntrypoints = ['canonical_intent', 'semantic_router', 'runtime_entrypoint', 'skills'];
+  for (const ep of requiredEntrypoints) {
+    const val = manifest.entrypoints[ep];
+    if (!isSafeRelativePath(val)) {
+      throw new Error(`Invalid or missing 'entrypoints.${ep}': expected safe relative path, got '${val}'.`);
+    }
+  }
 
-  if (!manifest.template || !manifest.template.version) {
-    throw new Error("Consumer repository manifest missing 'template.version'.");
+  // Strict template validation
+  if (!manifest.template || typeof manifest.template !== 'object') {
+    throw new Error("Consumer repository manifest missing 'template' declaration.");
+  }
+  if (typeof manifest.template.version !== 'string' || !manifest.template.version.trim()) {
+    throw new Error(`Consumer repository manifest missing or invalid 'template.version' string (got '${manifest.template.version}').`);
+  }
+
+  if (manifest.template.sync_status !== undefined) {
+    const validStatuses = ['synced', 'partial'];
+    if (!validStatuses.includes(manifest.template.sync_status)) {
+      throw new Error(`Invalid template.sync_status '${manifest.template.sync_status}'. Expected one of: ${validStatuses.join(', ')}.`);
+    }
+  }
+
+  if (manifest.template.available_version !== undefined && typeof manifest.template.available_version !== 'string') {
+    throw new Error(`Invalid template.available_version: expected string, got ${typeof manifest.template.available_version}.`);
+  }
+
+  if (manifest.template.managed_files !== undefined) {
+    if (!Array.isArray(manifest.template.managed_files)) {
+      throw new Error("Invalid 'template.managed_files': expected array of relative file paths.");
+    }
+    for (const f of manifest.template.managed_files) {
+      if (!isSafeRelativePath(f)) {
+        throw new Error(`Invalid path in 'template.managed_files': expected safe relative path, got '${f}'.`);
+      }
+    }
   }
 
   return {

@@ -54,7 +54,7 @@ The CLI will interactively ask you to choose from our 12-template matrix (4 Runt
 **Step 2: Choose Your Complexity Tier**
 - `light`: The bare minimum context files (PROJECT_MAP + core rules) for simple scripts or prototypes.
 - `standard`: The default. Full Context, Contracts, and Rules architecture for production services.
-- `full`: Enterprise grade. Standard plus path guardrails (read-only / append-only files, enforced by hooks or CI) and a context freshness checker.
+- `full`: High-maturity guardrails. Standard plus path guardrails (read-only / append-only files, enforced by hooks or CI) and a context freshness checker.
 
 *Alternatively, bypass the prompts with flags:*
 ```bash

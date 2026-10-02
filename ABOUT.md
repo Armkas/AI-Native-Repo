@@ -1,6 +1,7 @@
 # About AI-Native Repository Standard (ANR)
 
-> **"Vendors standardize how AI enters the repository. ANR standardizes how the repository is architected as a durable engineering asset for AI agents."**
+> **"Vendors standardize how AI enters the repository. ANR standardizes how the repository is architected as a durable engineering asset for AI agents."**  
+> *(厂商在解决“AI 怎么进入 Repo”，ANR 解决的是“Repo 本身应该怎样被设计成适合 AI 长期工作的工程资产”。)*
 
 ---
 
@@ -8,7 +9,7 @@
 
 The **AI-Native Repository Standard (ANR)** is an open-source engineering specification, CLI scaffolding toolchain, and architectural blueprint designed to elevate code repositories from **passive text for AI to read** into **active, deterministic workspaces for AI agents to operate**.
 
-As autonomous coding agents (Claude Code, Cursor, Codex, Gemini CLI) become primary engineering drivers, software repositories require a dedicated **AI Context Architecture** sitting atop conventional application structures (Clean, MVVM, DDD). ANR establishes the industry standard for how AI agents discover knowledge, obey business invariants, execute atomic skills, and verify code correctness autonomously without human babysitting.
+As autonomous coding agents (Claude Code, Cursor, Codex, Gemini CLI) become primary engineering drivers, software repositories require a dedicated **AI Context Architecture** sitting atop conventional application structures (Clean, MVVM, DDD). ANR proposes a structured, repository-level standard for how AI agents discover knowledge, obey business invariants, execute atomic skills, and verify code correctness autonomously without human babysitting.
 
 ---
 
@@ -16,7 +17,7 @@ As autonomous coding agents (Claude Code, Cursor, Codex, Gemini CLI) become prim
 
 By 2026, foundation models have massive context windows and near-human coding capabilities. Yet, teams attempting to scale AI agents across production codebases consistently hit three structural walls:
 
-1. **Context Bloat & Attention Degradation**: Stuffing entire codebases, database schemas, and multi-thousand-word rulebooks into monolithic prompts or `.cursorrules` floods the model's attention span. This leads to needle-in-a-haystack failures, skyrocketing token costs, and catastrophic hallucinations.
+1. **Context Bloat & Attention Degradation**: Stuffing entire codebases, database schemas, and multi-thousand-word rulebooks into monolithic prompts or `.cursorrules` floods the model's attention span. This leads to needle-in-a-haystack failures, skyrocketing token costs, severe hallucinations, and architectural misassumptions.
 2. **The "Brownfield Dilemma" (Legacy Code Friction)**: Most AI project templates assume you are starting from a blank slate. Attempting to force heavy AI rules onto an existing, 100,000-line codebase results in cognitive paralysis, rule collisions, and immediate abandonment by developers.
 3. **Runtime Fragmentation & Rule Drift**: Business semantics are universal, but agent runtimes are fragmented. Teams maintain competing, drifting rule sets across `.cursor/rules/*.mdc`, `CLAUDE.md`, `.gemini/settings.json`, and `.agents/skills/`.
 
@@ -50,9 +51,9 @@ L5  Implementation              → Actual production source code
 Teams do not need to document their entire legacy architecture upfront. Through ANR's tiered complexity model, an existing codebase evolves organically:
 
 
-* **Day 1 (Tier 1: Light) — 10-Minute Setup**: Zero code rewrites. Scaffold a < 2KB router, let an AI agent scan your directory tree to generate a realistic `PROJECT_MAP.md`, and set red lines in `MANUAL_TASKS.md`. The AI immediately stops hallucinating project structure.
+* **Day 1 (Tier 1: Light) — 10-Minute Setup**: Zero code rewrites. Scaffold a < 2KB router, let an AI agent scan your directory tree to generate a realistic `PROJECT_MAP.md`, and set red lines in `MANUAL_TASKS.md`. Provides agents an explicit repository map, eliminating guesswork on project layout.
 * **Day 30 (Tier 2: Standard) — On-Demand Knowledge**: Only document what you touch. When the AI works on a specific module (e.g., billing), capture `domains/billing.md` inside that PR, and enforce closed-loop verification via the `verify` skill.
-* **Day 90 (Tier 3: Full) — Enterprise Guardrails**: Once the team establishes full confidence, activate path guardrails (`protected-paths.txt`) and automated freshness checking in CI.
+* **Day 90 (Tier 3: Full) — High-Maturity Guardrails**: Once the team establishes full confidence, activate path guardrails (`protected-paths.txt`) and automated freshness checking in CI.
 
 ---
 

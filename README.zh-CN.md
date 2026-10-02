@@ -2,7 +2,7 @@
 
 [🇺🇸 English](README.md) | [🇨🇳 简体中文](README.zh-CN.md) | [🇹🇼 繁體中文](README.zh-TW.md) | [🇯🇵 日本語](README.ja.md) | [🇪🇸 Español](README.es.md) | [🇫🇷 Français](README.fr.md) | [🇩🇪 Deutsch](README.de.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇧🇷 Português](README.pt-BR.md) | [🇰🇷 한국어](README.ko.md) | [🇮🇳 हिन्दी](README.hi.md) | [🇸🇦 العربية](README.ar.md)
 
-> **“厂商解决的是 AI 如何进入代码库；ANR 标准化的是代码库本身应当如何设计，才能成为适合 AI 长期高效工作的工程资产。”**
+> **“厂商在解决‘AI 怎么进入 Repo’，ANR 解决的是‘Repo 本身应该怎样被设计成适合 AI 长期工作的工程资产’。”**
 
 一套跨 Agent 的工程规范、参考架构与生命周期治理平台，用于组织、验证和长期维护对 AI 友好的软件仓库。
 
@@ -54,7 +54,7 @@ CLI 会以交互的方式让你从我们的 12 套模板矩阵（4 种运行时 
 **第二步：选择复杂度层级 (Tier)**
 - `light`: 最基础的上下文文件（PROJECT_MAP + 核心规则），适合简单的脚本或原型。
 - `standard`: 默认选项。包含完整的上下文、契约和规则架构，适合生产级服务。
-- `full`: 企业级标准。在 standard 基础上增加路径护栏（只读 / 只追加文件，由钩子或 CI 强制执行）与上下文新鲜度检查脚本。
+- `full`: 高成熟度确定性护栏。在 standard 基础上增加路径护栏（只读 / 只追加文件，由钩子或 CI 强制执行）与上下文新鲜度检查脚本。
 
 *或者，你也可以通过参数直接一键生成：*
 ```bash

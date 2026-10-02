@@ -291,6 +291,60 @@ try {
   const updateWithPrune = run('node', [BIN, 'update', obsoleteDir, '--prune']);
   check(updateWithPrune.status === 0, 'anr update --prune should exit 0');
   check(!fs.existsSync(customScript), 'anr update --prune must remove managed obsolete file');
+
+  // 10. Malformed JSON Safety: Must abort and never overwrite invalid user config with template
+  const invalidJsonDir = path.join(cliTestDir, 'invalid-json-target');
+  fs.mkdirSync(invalidJsonDir, { recursive: true });
+  run('node', [BIN, 'init', invalidJsonDir, '--runtime', 'claude-code', '--tier', 'standard', '--lang', 'en']);
+  const corruptSettingsPath = path.join(invalidJsonDir, '.claude', 'settings.json');
+  const badJsonContent = '{\n  "custom_key": "unclosed_string\n';
+  fs.writeFileSync(corruptSettingsPath, badJsonContent);
+  const badJsonRun = run('node', [BIN, 'update', invalidJsonDir]);
+  check(badJsonRun.status !== 0, 'anr update on malformed user JSON config must fail and exit non-zero');
+  check(fs.readFileSync(corruptSettingsPath, 'utf8') === badJsonContent, 'anr update must preserve malformed user config without overwriting');
+
+  // 11. Managed Copy Mirror Sync: Directory mirror must synchronize from .agents/skills on update
+  const mirrorDir = path.join(cliTestDir, 'mirror-target');
+  fs.mkdirSync(mirrorDir, { recursive: true });
+  run('node', [BIN, 'init', mirrorDir, '--runtime', 'claude-code', '--tier', 'standard', '--lang', 'en']);
+  const claudeSkillsPath = path.join(mirrorDir, '.claude', 'skills');
+  // Replace symlink with concrete directory to simulate Windows copy-fallback environment
+  fs.rmSync(claudeSkillsPath, { recursive: true, force: true });
+  fs.mkdirSync(claudeSkillsPath, { recursive: true });
+  // Add a newly added canonical skill
+  const canonicalSkill = path.join(mirrorDir, '.agents', 'skills', 'test-sync', 'SKILL.md');
+  fs.mkdirSync(path.dirname(canonicalSkill), { recursive: true });
+  fs.writeFileSync(canonicalSkill, '---\nname: "test-sync"\ndescription: "A skill for testing mirror sync."\n---\n# Test\n');
+  const mirrorUpdateRun = run('node', [BIN, 'update', mirrorDir]);
+  check(mirrorUpdateRun.status === 0, 'anr update on concrete mirror directory should succeed');
+  check(fs.existsSync(path.join(claudeSkillsPath, 'test-sync', 'SKILL.md')), 'anr update must synchronize concrete mirror directory from .agents/skills');
+
+  // 12. Strict Manifest Schema Validation
+  const strictTestDir = path.join(cliTestDir, 'strict-schema-target');
+  fs.mkdirSync(strictTestDir, { recursive: true });
+  run('node', [BIN, 'init', strictTestDir, '--runtime', 'claude-code', '--tier', 'standard', '--lang', 'en']);
+  const strictManifestPath = path.join(strictTestDir, 'anr.yaml');
+  const validManifestRaw = fs.readFileSync(strictManifestPath, 'utf8');
+
+  // 12a. Missing required entrypoint key
+  fs.writeFileSync(strictManifestPath, validManifestRaw.replace('canonical_intent: "docs/"', 'hello: "garbage"'));
+  const test12a = run('node', [BIN, 'validate'], { cwd: strictTestDir });
+  check(test12a.status !== 0, 'manifest with missing canonical_intent entrypoint must fail validation');
+
+  // 12b. Absolute path in entrypoint
+  fs.writeFileSync(strictManifestPath, validManifestRaw.replace('canonical_intent: "docs/"', 'canonical_intent: "/etc/shadow"'));
+  const test12b = run('node', [BIN, 'validate'], { cwd: strictTestDir });
+  check(test12b.status !== 0, 'manifest with absolute path in entrypoint must fail validation');
+
+  // 12c. Invalid sync_status enum
+  fs.writeFileSync(strictManifestPath, validManifestRaw.replace('sync_status: "synced"', 'sync_status: "unknown_status"'));
+  const test12c = run('node', [BIN, 'validate'], { cwd: strictTestDir });
+  check(test12c.status !== 0, 'manifest with invalid sync_status enum must fail validation');
+
+  // 12d. Path traversal in managed_files
+  fs.writeFileSync(strictManifestPath, validManifestRaw.replace('- "AGENTS.md"', '- "../../../etc/passwd"'));
+  const test12d = run('node', [BIN, 'validate'], { cwd: strictTestDir });
+  check(test12d.status !== 0, 'manifest with path traversal in managed_files must fail validation');
 } finally {
   fs.rmSync(tmpRoot, { recursive: true, force: true });
 }

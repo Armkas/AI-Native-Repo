@@ -125,7 +125,7 @@ function doctorCommand() {
     if (isSymlink(linkPath)) {
       console.log(`  ✓ ${skillLinkRel} symlink healthy`);
     } else if (fs.existsSync(linkPath)) {
-      console.log(`  ⚠ ${skillLinkRel} is a copied compatibility mirror (run 'anr update' to sync)`);
+      console.log(`  ✓ ${skillLinkRel} managed copy mirror active (auto-synchronized on update)`);
     } else {
       console.log(`  ✗ ${skillLinkRel} missing`);
     }
@@ -461,12 +461,22 @@ function linkSkills(targetDir, runtime, templateDir, isDryRun, isForce) {
       console.log(`  Relink   : Replacing concrete directory ${linkRel} with symlink -> ${relTarget}`);
       if (!isDryRun) {
         fs.rmSync(linkPath, { recursive: true, force: true });
-        fs.symlinkSync(relTarget, linkPath, 'dir');
+        try {
+          fs.symlinkSync(relTarget, linkPath, 'dir');
+          return;
+        } catch (err) {
+          fs.cpSync(canonical, linkPath, { recursive: true });
+          console.log(`  Note     : symlinks unavailable, refreshed managed copy mirror at ${linkRel}`);
+          return;
+        }
       }
       return;
     } else {
-      console.log(`  Warning  : ${linkRel} exists as a concrete directory instead of a symlink.`);
-      console.log(`             To prevent copy drift, use --force to link to ${canonical}`);
+      console.log(`  Sync     : Synchronizing managed copy mirror ${linkRel} from ${canonical}`);
+      if (!isDryRun) {
+        fs.rmSync(linkPath, { recursive: true, force: true });
+        fs.cpSync(canonical, linkPath, { recursive: true });
+      }
       return;
     }
   }
@@ -478,52 +488,58 @@ function linkSkills(targetDir, runtime, templateDir, isDryRun, isForce) {
     fs.symlinkSync(relTarget, linkPath, 'dir');
   } catch (err) {
     fs.cpSync(canonical, linkPath, { recursive: true });
-    console.log(`  Note     : symlinks unavailable, copied instead — keep ${linkRel} in sync with .agents/skills/`);
+    console.log(`  Note     : symlinks unavailable, created managed copy mirror at ${linkRel}`);
   }
 }
 
 // Deep merges JSON runtime configurations (Claude settings, Cursor hooks, etc.)
 function mergeJsonConfigs(existingPath, templatePath) {
+  let existing, template;
   try {
-    const existing = JSON.parse(fs.readFileSync(existingPath, 'utf8'));
-    const template = JSON.parse(fs.readFileSync(templatePath, 'utf8'));
-    const merged = { ...existing };
-
-    if (template.permissions && typeof template.permissions === 'object') {
-      merged.permissions = merged.permissions || {};
-      for (const [k, v] of Object.entries(template.permissions)) {
-        if (Array.isArray(v)) {
-          const userArr = Array.isArray(merged.permissions[k]) ? merged.permissions[k] : [];
-          merged.permissions[k] = Array.from(new Set([...userArr, ...v]));
-        } else {
-          merged.permissions[k] = merged.permissions[k] || v;
-        }
-      }
-    }
-
-    if (template.hooks) {
-      if (Array.isArray(template.hooks)) {
-        merged.hooks = Array.isArray(merged.hooks) ? merged.hooks : [];
-        for (const th of template.hooks) {
-          const exists = merged.hooks.some(h => JSON.stringify(h) === JSON.stringify(th));
-          if (!exists) merged.hooks.push(th);
-        }
-      } else if (typeof template.hooks === 'object') {
-        merged.hooks = merged.hooks || {};
-        for (const [k, v] of Object.entries(template.hooks)) {
-          if (!merged.hooks[k]) {
-            merged.hooks[k] = v;
-          } else if (Array.isArray(v) && Array.isArray(merged.hooks[k])) {
-            merged.hooks[k] = Array.from(new Set([...merged.hooks[k], ...v]));
-          }
-        }
-      }
-    }
-
-    return JSON.stringify(merged, null, 2) + '\n';
+    existing = JSON.parse(fs.readFileSync(existingPath, 'utf8'));
   } catch (err) {
-    return fs.readFileSync(templatePath, 'utf8');
+    throw new Error(`Failed to parse existing JSON config at '${existingPath}': ${err.message}`);
   }
+  try {
+    template = JSON.parse(fs.readFileSync(templatePath, 'utf8'));
+  } catch (err) {
+    throw new Error(`Failed to parse template JSON config at '${templatePath}': ${err.message}`);
+  }
+
+  const merged = { ...existing };
+
+  if (template.permissions && typeof template.permissions === 'object') {
+    merged.permissions = merged.permissions || {};
+    for (const [k, v] of Object.entries(template.permissions)) {
+      if (Array.isArray(v)) {
+        const userArr = Array.isArray(merged.permissions[k]) ? merged.permissions[k] : [];
+        merged.permissions[k] = Array.from(new Set([...userArr, ...v]));
+      } else {
+        merged.permissions[k] = merged.permissions[k] || v;
+      }
+    }
+  }
+
+  if (template.hooks) {
+    if (Array.isArray(template.hooks)) {
+      merged.hooks = Array.isArray(merged.hooks) ? merged.hooks : [];
+      for (const th of template.hooks) {
+        const exists = merged.hooks.some(h => JSON.stringify(h) === JSON.stringify(th));
+        if (!exists) merged.hooks.push(th);
+      }
+    } else if (typeof template.hooks === 'object') {
+      merged.hooks = merged.hooks || {};
+      for (const [k, v] of Object.entries(template.hooks)) {
+        if (!merged.hooks[k]) {
+          merged.hooks[k] = v;
+        } else if (Array.isArray(v) && Array.isArray(merged.hooks[k])) {
+          merged.hooks[k] = Array.from(new Set([...merged.hooks[k], ...v]));
+        }
+      }
+    }
+  }
+
+  return JSON.stringify(merged, null, 2) + '\n';
 }
 
 function classifyOwnership(relPath) {
@@ -648,8 +664,15 @@ async function updateCommand(args) {
       if (ownership === 'merge-json') {
         console.log(`  ~ Merge  : ${act.relPath} (preserving user custom rules & keys)`);
         if (!isDryRun) {
-          const mergedContent = mergeJsonConfigs(act.destPath, act.srcPath);
-          fs.writeFileSync(act.destPath, mergedContent);
+          try {
+            const mergedContent = mergeJsonConfigs(act.destPath, act.srcPath);
+            fs.writeFileSync(act.destPath, mergedContent);
+          } catch (err) {
+            console.error(`\n❌ Error merging '${act.relPath}': ${err.message}`);
+            console.error(`   To protect your configuration, no files were modified.`);
+            console.error(`   Please repair the JSON syntax in '${act.relPath}' and run 'anr update' again.`);
+            process.exit(1);
+          }
         }
         merged++;
       } else if (ownership === 'managed' || isForce) {
