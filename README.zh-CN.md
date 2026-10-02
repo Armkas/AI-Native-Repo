@@ -73,7 +73,7 @@ npx ai-native-repo init . --runtime claude-code --tier full --lang zh-CN   # en 
 
 **“语义是统一的，但运行时是分裂的。”**
 
-到了 2026 年，业界已经意识到构建一个 AI-Native 的仓库需要分离三个不同的层级：
+到了 2026 年，主流智能体运行时与工程实践已日益明确地将三个层级进行解耦分离：
 1. **模型 / 模型提供商 (The Model / Model Provider)**（例如：OpenAI、Anthropic、Google、DeepSeek、Qwen、Meta、Moonshot、智谱 (Zhipu)、MiniMax）：决定了底层模型的原始能力和推理水平。这里绝不要写死具体的模型版本号——完整的运行时 × 模型提供商映射请见[模型兼容性矩阵](spec/model-compatibility.md)。
 2. **智能体运行时 (The Agent Runtime)**（例如：Claude Code, Codex, Gemini CLI, Cursor）：决定了智能体*如何*读取文件、*何时*调用技能，以及执行*什么*钩子。
 3. **仓库标准 (The Repository Standard)**（例如：上下文、契约、工作流）：你的项目的通用语义真相（Semantic truth）。

@@ -51,7 +51,8 @@ Before modifying any content, identify the required context area:
 
 1. **Explicit Structure, Not Excessive Abstraction**: Prefer clear responsibilities, boundary-driven interfaces, and concrete documentation over layers of unnecessary facades or proxies.
 2. **Docs as Routing Layer, Not Second Copy**: Documentation guides the agent to the right place quickly; it is not a redundant duplicate of the source code.
-3. **Semantic Truth vs Runtime Entry**: `docs/` is the semantic truth of a project. `AGENTS.md` (or `.cursor/rules/`, `CLAUDE.md`) is a Runtime Entry Point.
+3. **Canonical Semantic Intent vs Runtime Entry**: `docs/` is the canonical semantic intent of a project; actual runtime behavior is arbitrated by implementation and tests. `AGENTS.md` (or `.cursor/rules/`, `CLAUDE.md`) is a Runtime Entry Point.
+
 
 ---
 

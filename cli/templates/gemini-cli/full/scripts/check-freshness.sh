@@ -54,11 +54,12 @@ for s in .agents/skills/*/SKILL.md; do
   [ -n "$desc" ] || fail "$s: empty description (runtimes use it to decide when to load the skill)"
 done
 
-# 4. The router must stay small (Rule 01: < 2 KB).
+# 4. The router must stay small (Rule 01: <= 2 KB / 2048 bytes).
 if [ -f AGENTS.md ]; then
   size=$(wc -c < AGENTS.md | tr -d ' ')
-  [ "$size" -gt 2048 ] && warn "AGENTS.md is ${size} bytes (> 2048). Move detail into docs/ or .agents/ and link to it."
+  [ "$size" -gt 2048 ] && fail "AGENTS.md is ${size} bytes (> 2048 budget per Rule 01). Move detail into docs/ or .agents/ and link to it."
 fi
+
 
 # 5. Paths named in the context index must still exist.
 if [ -f .agents/context-index.md ]; then

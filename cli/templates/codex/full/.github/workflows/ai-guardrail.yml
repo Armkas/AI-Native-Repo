@@ -1,0 +1,22 @@
+name: AI-Native Guardrails
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+
+jobs:
+  guardrail:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify AI Context Freshness
+        run: bash scripts/check-freshness.sh --strict
+
+      - name: Enforce Path Guardrails (PR commits)
+        if: github.event_name == 'pull_request'
+        run: bash scripts/guard-paths.sh ci origin/${{ github.base_ref }}

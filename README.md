@@ -73,7 +73,7 @@ You don't need to document your entire legacy codebase upfront. Through the **Ti
 
 **"The semantics are unified, but the runtimes are fragmented."**
 
-As of 2026, the industry has realized that building an AI-Native repository requires separating three distinct layers:
+As of 2026, major coding-agent runtimes increasingly separate three distinct layers:
 1. **The Model / Model Provider** (e.g., OpenAI, Anthropic, Google, DeepSeek, Qwen, Meta, Moonshot, Zhipu, MiniMax): Determines the underlying model's raw capability and reasoning. Never hard-code a specific model version here — see the [Model Compatibility Matrix](spec/model-compatibility.md) for the current Runtime × Model Provider mapping.
 2. **The Agent Runtime** (e.g., Claude Code, Codex, Gemini CLI, Cursor): Determines *how* files are read, *when* skills are invoked, and *what* hooks are executed.
 3. **The Repository Standard** (e.g., Context, Contracts, Workflows): The universal semantic truth of your project.

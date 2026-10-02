@@ -8,8 +8,15 @@ const LANGS = ['en', 'zh-CN', 'ja'];
 // Runtimes that only read skills from their own directory get a link to the canonical .agents/skills/.
 // Codex, Cursor and Gemini CLI discover .agents/skills/ natively; Claude Code reads only .claude/skills/.
 const SKILL_LINKS = { 'claude-code': '.claude/skills' };
+const RUNTIME_ENTRIES = {
+  'claude-code': 'CLAUDE.md',
+  'codex': 'AGENTS.md',
+  'gemini-cli': 'GEMINI.md',
+  'cursor': '.cursor/rules/core.mdc'
+};
 const VARIANT_RE = /^(.+)\.(zh-CN|ja)(\.[^.]+)$/;
 const CLI_VERSION = require('../package.json').version;
+
 
 // A simple CLI prompt helper
 function prompt(question) {
@@ -296,6 +303,7 @@ async function initCommand(args) {
 }
 
 function generateManifest(runtime, tier, lang) {
+  const runtimeEntry = RUNTIME_ENTRIES[runtime] || 'AGENTS.md';
   return [
     `schema_version: "2.0"`,
     `repository:`,
@@ -306,13 +314,15 @@ function generateManifest(runtime, tier, lang) {
     `tier: "${tier}"`,
     `language: "${lang}"`,
     `entrypoints:`,
-    `  semantic_truth: "docs/"`,
-    `  runtime_adapter: "AGENTS.md"`,
+    `  canonical_intent: "docs/"`,
+    `  semantic_router: "AGENTS.md"`,
+    `  runtime_entrypoint: "${runtimeEntry}"`,
     `  skills: ".agents/skills/"`,
     `template:`,
     `  version: "${CLI_VERSION}"`
   ].join('\n') + '\n';
 }
+
 
 function planLanguageFiles(srcDir, lang) {
   const out = new Map();

@@ -166,9 +166,21 @@ try {
           check(cursorGuard('db/migrations/001_init.sql', true) === 2, `${label}: Cursor Write editing an existing migration must be blocked`);
           check(cursorGuard('db/migrations/002_new.sql', false) === 0, `${label}: Cursor Write creating a new migration must be allowed`);
 
+          // Test CI layer: guard-paths.sh ci <base-ref> prevents bypassing hooks via shell/git
+          run('git', ['config', 'user.name', 'CI Test'], { cwd: dir });
+          run('git', ['config', 'user.email', 'ci@example.com'], { cwd: dir });
+          run('git', ['commit', '-m', 'base commit', '--allow-empty'], { cwd: dir });
+          fs.writeFileSync(path.join(dir, '.env'), 'SECRET=test\n');
+          run('git', ['add', '.env'], { cwd: dir });
+          run('git', ['commit', '-m', 'add secret env'], { cwd: dir });
+          const ciCheck = run('bash', ['scripts/guard-paths.sh', 'ci', 'HEAD~1'], { cwd: dir });
+          check(ciCheck.status === 1, `${label}: guard-paths.sh ci must fail when protected paths are committed in git`);
+          run('git', ['reset', '--hard', 'HEAD~1'], { cwd: dir });
+
           fs.writeFileSync(path.join(dir, 'docs', 'broken.md'), '[x](nope.md) /Users/someone/project/\n');
           const bad = run('bash', ['scripts/check-freshness.sh'], { cwd: dir });
           check(bad.status === 1, `${label}: check-freshness.sh must fail on broken links / absolute paths`);
+
         }
       }
     }

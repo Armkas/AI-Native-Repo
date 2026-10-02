@@ -562,11 +562,12 @@ Gemini CLI 用 `.geminiignore`。不存在跨 Runtime 的通用忽略文件—�
 Codex 更是完全没有忽略文件——所以密钥应放在工作区之外，而不是寄希望于某个约定。
 不要把上下文预算消耗在机器产物或噪音数据上。
 
-## 43.1 语义真理 vs 运行入口 (Semantic Truth vs Runtime Entry)
+## 43.1 规范语义意图 vs 运行入口 (Canonical Semantic Intent vs Runtime Entry)
 
-在异构 AI 工具并存的现实中（Claude Code, Gemini, Windsurf, Cursor），不同的工具默认读取不同的入口（`CLAUDE.md`, `GEMINI.md`, `.cursor/rules/*.mdc`）。
-原则是：**`docs/` 承载项目无关具体工具的语义真理 (Semantic Truth)，而各家特有的配置文件仅作为运行入口 (Runtime Entry)**。
-不要将业务知识复制到 `.cursor/rules/` 或 `CLAUDE.md` 中。这些 Runtime Adapter 应当将 Agent 引导路由回统一的 `docs/` 标准架构中。
+在异构 AI 工具并存的现实中（Claude Code, Codex, Gemini CLI, Cursor），不同的工具默认读取不同的入口（`CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `.cursor/rules/*.mdc`）。
+原则是：**`docs/` 承载项目架构设计与业务语义的意图源头 (Canonical Semantic Intent)，而各家特有的配置文件仅作为运行入口 (Runtime Entry)**。
+真正的运行时行为由实现和自动化测试裁决（第 41 条：实际行为/测试 → 实现 → 契约 → 文档）。不要将业务知识复制到 `.cursor/rules/` 或 `CLAUDE.md` 中，让这些运行时适配器将 Agent 直接路由回统一的 `docs/` 意图层中。
+
 
 ## 43.2 人机协作边界与工具 (`MANUAL_TASKS.md`)
 

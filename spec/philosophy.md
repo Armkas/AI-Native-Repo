@@ -559,11 +559,12 @@ Use each Runtime's own mechanism: `permissions.deny` `Read(...)` rules in Claude
 major runtime, and Codex has no ignore file at all — so secrets belong outside the working tree, not
 behind a convention. Never burn context budget on compiler outputs or binary noise.
 
-## 42.1 Semantic Truth vs Runtime Entry
+## 42.1 Canonical Semantic Intent vs Runtime Entry
 
-In a heterogeneous AI landscape (Claude Code, Gemini, Windsurf, Cursor), different tools load different root instructions (`CLAUDE.md`, `GEMINI.md`, `.cursor/rules/*.mdc`).
-The architectural principle: **`docs/` holds the Semantic Truth, while the runtime-specific file acts purely as the Runtime Entry**.
-Do not duplicate business knowledge into `.cursor/rules/` and `CLAUDE.md`. Instead, those runtime adapters should route the agent into the shared `docs/` repository standard.
+In a heterogeneous AI landscape (Claude Code, Codex, Gemini CLI, Cursor), different tools load different root instructions (`CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `.cursor/rules/*.mdc`).
+The architectural principle: **`docs/` holds the Canonical Semantic Intent (the architecture, intent, and domain knowledge of the system), while runtime-specific files act purely as Runtime Entries**.
+Actual runtime truth is arbitrated by implementation and automated tests (Rule 41: actual test / behavior → implementation → contract → documentation). Do not duplicate business knowledge into runtime-specific files; let those runtime adapters route the agent directly into the canonical intent layer in `docs/`.
+
 
 ## 42.2 Human-in-the-Loop Boundaries & Tools (`MANUAL_TASKS.md`)
 

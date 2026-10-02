@@ -15,8 +15,9 @@ const RUNTIME_LAYERS = { light: ['base'], standard: ['base', 'standard'], full: 
 const IGNORED = new Set(['.DS_Store', 'Thumbs.db']);
 
 const srcDir = path.join(__dirname, '..', 'template-source');
-// We generate them directly into the CLI package so it can be packed
-const outDir = path.join(__dirname, '..', 'cli', 'templates');
+// Target directory defaults to cli/templates, or can be passed as argument (e.g. for pure validation)
+const outDir = process.argv[2] ? path.resolve(process.argv[2]) : path.join(__dirname, '..', 'cli', 'templates');
+
 
 function copyRecursive(src, dest) {
   fs.mkdirSync(dest, { recursive: true });

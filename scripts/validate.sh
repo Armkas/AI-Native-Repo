@@ -59,14 +59,16 @@ check_file "cli/package.json"
 echo "--- Template Integrity ---"
 
 echo "Checking for template drift..."
-node scripts/generate-templates.js > /dev/null
-# Unstaged edits and untracked new files both count as drift (plain `git diff` misses new files).
-if ! git diff --quiet -- cli/templates || [ -n "$(git ls-files --others --exclude-standard -- cli/templates)" ]; then
-    echo "❌ FAIL: cli/templates is out of sync with template-source! Commit the changes after running generate-templates.js."
-    FAILS=$((FAILS+1))
-else
+TMP_GEN=$(mktemp -d)
+node scripts/generate-templates.js "$TMP_GEN" > /dev/null
+if diff -r -q "$TMP_GEN" cli/templates > /dev/null 2>&1; then
     echo "✅ PASS: Generated templates are in sync."
+else
+    echo "❌ FAIL: cli/templates is out of sync with template-source! Run 'node scripts/generate-templates.js' and commit."
+    FAILS=$((FAILS+1))
 fi
+rm -rf "$TMP_GEN"
+
 
 if [ ! -d "cli/templates" ]; then
     echo "❌ FAIL: cli/templates missing. Run 'node scripts/generate-templates.js' first."
