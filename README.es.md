@@ -41,6 +41,35 @@ npx ai-native-repo init . --runtime claude-code --tier full --lang zh-CN   # en 
 
 ---
 
+## 🎯 Ventaja Principal: La Doble Arquitectura "Progresiva" (The Dual Progressive Architecture)
+
+La mayoría de las plantillas de prompts de IA fallan en proyectos complejos del mundo real por dos razones: **la saturación de contexto (Context Bloat) degrada la atención de la IA**, y **el alto coste de configuración inicial hace imposible su adopción en repositorios existentes**. El Estándar de Repositorio Nativo de IA resuelve ambos problemas mediante un diseño progresivo dual:
+
+### 1. Revelación Progresiva del Contexto (Progressive Context Disclosure) — Preservar la atención de la IA
+> **Context Must Be Earned (El contexto debe ganarse bajo demanda).**
+
+Nunca alimentes a un agente con un prompt monolítico de 100.000 palabras. El punto de entrada global (`AGENTS.md`) está estrictamente limitado a **< 2 KB** para actuar como un controlador de tráfico aéreo ultraligero. El agente descubre el contexto capa por capa según sea necesario:
+
+* **L0: Agent Rules (< 2KB)** → ¿Cómo debe comportarse la IA? (Reglas globales y enrutamiento)
+* **L1: Project Map (< 100 líneas)** → ¿Qué es este proyecto y dónde está cada cosa? (Mapa físico)
+* **L2: Architecture / Domain** → ¿Qué problema de negocio resuelve este dominio?
+* **L3: Interface / Contract** → ¿Cómo se comunican los componentes entre sí?
+* **L4: Invariants / Tests** → ¿Qué reglas NUNCA deben romperse? ¿Cómo verificarlo?
+* **L5: Implementation** → Código fuente real
+
+**Solo se carga el contexto necesario para la tarea actual.** Esto reduce drásticamente el consumo de tokens y elimina la degradación de la atención y las alucinaciones en modelos grandes.
+
+### 2. Adopción Progresiva del Repositorio (Progressive Repository Adoption) — Migración sin fricción para proyectos existentes
+> **No se requiere empezar desde cero. Cualquier base de código existente puede evolucionar en 10 minutos.**
+
+No necesitas documentar todo tu código heredado de la noche a la mañana. Mediante el **Modelo de Niveles de Complejidad (Tiers)**, un repositorio existente adopta las prácticas nativas de IA de forma progresiva:
+
+* **Día 1 (Tier 1: Light) — Configuración en 10 minutos**: Cero reescrituras de código. Genera un enrutador de < 2KB, deja que la IA escanee tu árbol existente para generar un `PROJECT_MAP.md` realista, y define límites en `MANUAL_TASKS.md`. La IA deja de alucinar sobre la estructura de inmediato.
+* **Día 30 (Tier 2: Standard) — Conocimiento bajo demanda**: Documenta solo lo que tocas. Cuando la IA trabaje en un módulo específico (p. ej., autenticación), documenta `domains/auth.md` en esa misma PR e implementa bucles de verificación mediante el skill `verify`.
+* **Día 90 (Tier 3: Full) — Guardarraíles empresariales**: Una vez que el equipo se sienta cómodo, introduce guardarraíles de rutas (archivos de solo lectura/solo adición) y comprobaciones automáticas de frescura en CI.
+
+---
+
 ## ⚠️ Agnóstico a la semántica, Consciente del entorno, Ajustable al modelo
 
 **"La semántica está unificada, pero los entornos están fragmentados."**

@@ -41,6 +41,35 @@ npx ai-native-repo init . --runtime claude-code --tier full --lang zh-CN   # en 
 
 ---
 
+## 🎯 Avantage Clé : La Double Architecture "Progressive" (The Dual Progressive Architecture)
+
+La plupart des modèles de prompts échouent sur des projets réels complexes pour deux raisons : **la saturation de contexte (Context Bloat) dégrade l'attention de l'IA**, et **les coûts initiaux élevés rendent l'adoption impossible sur les projets existants**. Le Standard de Dépôt Natif IA résout ces deux problèmes grâce à une conception progressive double :
+
+### 1. Révélation Progressive du Contexte (Progressive Context Disclosure) — Préserver l'attention de l'IA
+> **Context Must Be Earned (Le contexte doit être mérité à la demande).**
+
+Ne donnez jamais à un agent un prompt monolithique de 100 000 mots. Le point d'entrée global (`AGENTS.md`) est strictement limité à **< 2 Ko** pour agir comme un contrôleur aérien ultra-léger. L'agent découvre le contexte couche par couche à la demande, sans jamais tout charger d'un coup :
+
+* **L0: Agent Rules (< 2 Ko)** → Comment l'IA doit-elle se comporter ? (Règles globales et routage)
+* **L1: Project Map (< 100 lignes)** → Quel est ce projet et où se trouvent les composants ? (Carte physique)
+* **L2: Architecture / Domain** → Quel problème métier ce domaine résout-il ?
+* **L3: Interface / Contract** → Comment les composants communiquent-ils entre eux ?
+* **L4: Invariants / Tests** → Quelles règles ne doivent JAMAIS être enfreintes ? Comment vérifier ?
+* **L5: Implementation** → Code source réel
+
+**Seul le contexte nécessaire à la tâche courante est chargé.** Cela réduit considérablement l'usage de tokens et élimine la perte d'attention et les hallucinations.
+
+### 2. Adoption Progressive du Dépôt (Progressive Repository Adoption) — Migration sans friction pour les projets existants
+> **Pas besoin de repartir de zéro. Tout projet existant peut évoluer en 10 minutes.**
+
+Vous n'avez pas besoin de documenter tout votre code hérité en une nuit. Grâce au **Modèle de Niveaux de Complexité (Tiers)**, un dépôt existant adopte les pratiques natives IA de manière progressive :
+
+* **Jour 1 (Tier 1: Light) — Mise en place en 10 minutes** : Aucune réécriture de code. Générez un routeur de < 2 Ko, laissez l'IA scanner votre arborescence pour générer un `PROJECT_MAP.md` réaliste, et fixez des limites dans `MANUAL_TASKS.md`. L'IA cesse immédiatement de se perdre dans le projet.
+* **Jour 30 (Tier 2: Standard) — Connaissance à la demande** : Ne documentez que ce que vous touchez. Lorsque l'IA modifie un module spécifique (ex. auth), ajoutez `domains/auth.md` dans cette PR et intégrez la boucle de test via le skill `verify`.
+* **Jour 90 (Tier 3: Full) — Garde-fous d'entreprise** : Une fois l'équipe à l'aise, introduisez des garde-fous de chemins (fichiers en lecture seule/ajout seul) et des vérifications de fraîcheur dans la CI.
+
+---
+
 ## ⚠️ Agnostique à la sémantique, Conscient de l'environnement, Ajustable au Modèle
 
 À partir de 2026, l'industrie a réalisé que la construction d'un dépôt IA natif nécessite de séparer trois couches distinctes :

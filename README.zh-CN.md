@@ -40,6 +40,35 @@ npx ai-native-repo init . --runtime claude-code --tier full --lang zh-CN   # en 
 
 ---
 
+## 🎯 核心设计哲学：双重“渐进式”架构 (The Dual Progressive Architecture)
+
+市面上大多数 AI Prompt 模板在复杂项目中迅速失效，根源在于两大痛点：**一次性塞入过多规则导致模型注意力崩溃（Context Bloat）**，以及**门槛过高导致已有老项目无法落地**。本标准通过两层渐进式设计彻底解决这两个问题：
+
+### 1. 上下文渐进式披露 (Progressive Context Disclosure) —— 保护 AI 注意力
+> **Context Must Be Earned（上下文必须按需获取）。**
+
+不要给 AI 塞入几万字的超级大文档。全局入口（`AGENTS.md`）严格限制在 **< 2 KB**，充当极简的“空中交通管制员（Traffic Controller）”。AI 根据任务按需逐层展开上下文，绝不一次性全量加载：
+
+* **L0: Agent Rules (< 2KB)** → AI 怎么工作？（行为红线与全局路由）
+* **L1: Project Map (< 100行)** → 项目是什么？核心组件在哪里？（物理地图）
+* **L2: Architecture / Domain** → 这个具体业务领域在解决什么问题？
+* **L3: Interface / Contract** → 组件之间如何定义边界与协议？
+* **L4: Invariants / Tests** → 什么规则绝对不能破坏？如何进行闭环验证？
+* **L5: Implementation** → 具体业务代码实现
+
+**每次任务仅按需获取当前层级上下文**，既大幅节省 Token 成本，又彻底消除了大模型在超长上下文中的注意力涣散与代码幻觉。
+
+### 2. 仓库渐进式采纳 (Progressive Repository Adoption) —— 存量老项目零门槛落地
+> **无需推倒重来，任何已写好的老项目都能在 10 分钟内渐进式进化。**
+
+你完全不需要在一夜之间为整个老仓库补齐所有架构文档。通过本标准的 **Tier 阶梯复杂度模型**，已有项目可以自然生长：
+
+* **Day 1（Tier 1: Light）极简接入（10 分钟）**：无需重构任何代码。生成 2KB 极简路由，让 AI 扫描现有目录自动生成真实的 `PROJECT_MAP.md`，并在 `MANUAL_TASKS.md` 划定敏感路径红线。AI 立即停止跨模块乱翻乱猜。
+* **Day 30（Tier 2: Standard）按需沉淀**：不为写文档而写文档。仅当 AI 正在修改某具体业务模块时，顺手沉淀出对应的 `domains/*.md`，并接入 `verify` 自动化测试闭环。
+* **Day 90（Tier 3: Full）成熟护栏**：团队完全建立信任后，配置只读/只追加路径拦截（Guardrails）与死链/新鲜度检查（Freshness Check）。
+
+---
+
 ## ⚠️ 语义不可知，运行时感知，模型可调 (Semantic-Agnostic, Runtime-Aware, Model-Tunable)
 
 **“语义是统一的，但运行时是分裂的。”**

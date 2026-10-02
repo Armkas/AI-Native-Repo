@@ -41,6 +41,35 @@ npx ai-native-repo init . --runtime claude-code --tier full --lang zh-CN   # en 
 
 ---
 
+## 🎯 Vantagem Principal: A Dupla Arquitetura "Progressiva" (The Dual Progressive Architecture)
+
+A maioria dos templates de prompts para IA falha em projetos complexos por dois motivos: **o inchaço de contexto (Context Bloat) degrada a atenção da IA**, e **o alto custo inicial inviabiliza a adoção em projetos existentes**. O Padrão de Repositório Nativo de IA resolve ambos através de um design progressivo duplo:
+
+### 1. Revelação Progressiva de Contexto (Progressive Context Disclosure) — Preservando a Atenção da IA
+> **Context Must Be Earned (O contexto deve ser conquistado sob demanda).**
+
+Nunca forneça a um agente um prompt monolítico de 100.000 palavras. O ponto de entrada global (`AGENTS.md`) é estritamente limitado a **< 2 KB** para atuar como um controlador de tráfego aéreo leve. O agente descobre o contexto camada por camada sob demanda:
+
+* **L0: Agent Rules (< 2KB)** → Como a IA deve se comportar? (Roteador global e limites)
+* **L1: Project Map (< 100 linhas)** → O que é este projeto e onde está tudo? (Mapa físico)
+* **L2: Architecture / Domain** → Que problema de negócio este domínio resolve?
+* **L3: Interface / Contract** → Como os componentes se comunicam?
+* **L4: Invariants / Tests** → Quais regras NUNCA devem ser quebradas? Como validar?
+* **L5: Implementation** → Código-fonte real
+
+**Apenas o contexto necessário para a tarefa atual é carregado.** Isso reduz drasticamente o consumo de tokens e elimina a perda de foco e as alucinações.
+
+### 2. Adoção Progressiva do Repositório (Progressive Repository Adoption) — Migração sem Atrito para Projetos Existentes
+> **Não é necessário recomeçar do zero. Qualquer código existente pode evoluir em 10 minutos.**
+
+Você não precisa documentar todo o código legado de uma vez. Através do **Modelo de Níveis de Complexidade (Tiers)**, um repositório existente evolui naturalmente:
+
+* **Dia 1 (Tier 1: Light) — Configuração em 10 minutos**: Nenhuma linha de código reescrita. Crie um roteador < 2KB, deixe a IA escanear sua árvore para gerar um `PROJECT_MAP.md` realista e defina limites em `MANUAL_TASKS.md`. A IA para imediatamente de se perder no projeto.
+* **Dia 30 (Tier 2: Standard) — Conhecimento sob Demanda**: Documente apenas o que for alterado. Quando a IA trabalhar em um módulo (ex: auth), crie `domains/auth.md` nesse PR e adicione verificações de testes com a skill `verify`.
+* **Dia 90 (Tier 3: Full) — Guardrails Corporativos**: Com a equipe confortável, introduza proteção de caminhos (arquivos somente-leitura/somente-adição) e checagens automáticas de integridade no CI.
+
+---
+
 ## ⚠️ Agnóstico à Semântica, Ciente do Runtime, Ajustável ao Modelo
 
 **"A semântica é unificada, mas os runtimes são fragmentados."**

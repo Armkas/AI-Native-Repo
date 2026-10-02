@@ -41,6 +41,35 @@ npx ai-native-repo init . --runtime claude-code --tier full --lang zh-CN   # en 
 
 ---
 
+## 🎯 Kernvorteil: Die doppelte "progressive" Architektur (The Dual Progressive Architecture)
+
+Die meisten KI-Prompt-Vorlagen scheitern in komplexen Projekten aus zwei Gründen: **Context Bloat führt zum Verlust der KI-Aufmerksamkeit**, und **hohe Einstiegshürden machen die Übernahme in bestehende Projekte unmöglich**. Der AI-Native Repository Standard löst beides durch ein duales progressives Konzept:
+
+### 1. Progressive Kontext-Offenlegung (Progressive Context Disclosure) — KI-Aufmerksamkeit bewahren
+> **Context Must Be Earned (Kontext muss bei Bedarf verdient werden).**
+
+Füttere einen KI-Agenten niemals mit einem riesigen 100.000-Wörter-Prompt. Der globale Einstiegspunkt (`AGENTS.md`) ist strikt auf **< 2 KB** begrenzt und agiert als leichtgewichtiger "Fluglotse". Der Agent erschließt den Kontext Schicht für Schicht nach Bedarf:
+
+* **L0: Agent Rules (< 2 KB)** → Wie soll sich die KI verhalten? (Verhaltensregeln und globales Routing)
+* **L1: Project Map (< 100 Zeilen)** → Was ist dieses Projekt und wo ist alles? (Physische Karte)
+* **L2: Architecture / Domain** → Welches fachliche Problem löst diese Domäne?
+* **L3: Interface / Contract** → Wie kommunizieren Komponenten miteinander?
+* **L4: Invariants / Tests** → Welche Regeln dürfen NIEMALS verletzt werden? Wie wird verifiziert?
+* **L5: Implementation** → Eigentlicher Quellcode
+
+**Es wird nur der für die aktuelle Aufgabe benötigte Kontext geladen.** Dies senkt den Token-Verbrauch drastisch und eliminiert Aufmerksamkeitsverlust und Halluzinationen.
+
+### 2. Progressive Repository-Einführung (Progressive Repository Adoption) — Reibungslose Migration für bestehende Projekte
+> **Kein Neustart auf der grünen Wiese erforderlich. Jedes bestehende Projekt kann sich in 10 Minuten weiterentwickeln.**
+
+Du musst nicht über Nacht die gesamte Legacy-Codebasis dokumentieren. Über das **Stufenmodell (Tiers)** wächst ein bestehendes Projekt schrittweise in den AI-Native-Standard hinein:
+
+* **Tag 1 (Tier 1: Light) — 10-Minuten-Setup**: Kein Code wird umgeschrieben. Richte einen < 2 KB Router ein, lass die KI deine Struktur scannen, um eine realistische `PROJECT_MAP.md` zu erstellen, und setze Grenzen in `MANUAL_TASKS.md`. Die KI hört sofort auf, im Projekt umherzuirren.
+* **Tag 30 (Tier 2: Standard) — Wissen auf Abruf**: Dokumentiere nur das, was angefasst wird. Wenn die KI an einem Modul (z. B. Auth) arbeitet, erfasse `domains/auth.md` in diesem PR und binde den Verifizierungs-Loop über den Skill `verify` ein.
+* **Tag 90 (Tier 3: Full) — Enterprise-Schutz**: Sobald das Team vertraut ist, aktiviere Pfad-Schutzregeln (Read-Only/Append-Only) und automatisierte Frischeprüfungen in der CI.
+
+---
+
 ## ⚠️ Semantikunabhängig, Laufzeitabhängig, Modellanpassbar
 
 Ab 2026 hat die Branche erkannt, dass der Aufbau eines KI-nativen Repositories die Trennung von drei verschiedenen Ebenen erfordert:
