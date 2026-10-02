@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { parseSkillFrontmatter } = require('../src/yaml.js');
 
 const BIN = path.join(__dirname, '..', 'bin', 'anr.js');
 const catalog = require('../../spec/runtime-catalog.json');
@@ -84,8 +85,9 @@ try {
         const skillsDir = path.join(dir, '.agents', 'skills');
         check(fs.existsSync(path.join(skillsDir, 'verify', 'SKILL.md')), `${label}: missing core skill 'verify'`);
         for (const name of fs.existsSync(skillsDir) ? fs.readdirSync(skillsDir) : []) {
-          const fm = frontmatter(path.join(skillsDir, name, 'SKILL.md'));
-          check(fm && fm.name === name && fm.description, `${label}: skill '${name}' has invalid frontmatter`);
+          const content = fs.readFileSync(path.join(skillsDir, name, 'SKILL.md'), 'utf8');
+          const res = parseSkillFrontmatter(content, name);
+          check(res.valid, `${label}: skill '${name}' violates Agent Skills standard: ${res.error}`);
         }
         if (tier !== 'light') {
           check(fs.readdirSync(skillsDir).length >= 5, `${label}: standard/full should ship the core skill set`);
@@ -266,6 +268,29 @@ try {
   // 8. Doctor Command on Consumer Workspace
   const docConsumer = run('node', [BIN, 'doctor'], { cwd: updateDir });
   check(docConsumer.status === 0 && docConsumer.stdout.includes('Doctor inspection complete'), 'anr doctor should pass on initialized consumer repo');
+
+  // 9. Obsolete File Detection and Prune Support
+  const obsoleteDir = path.join(cliTestDir, 'obsolete-target');
+  fs.mkdirSync(obsoleteDir, { recursive: true });
+  run('node', [BIN, 'init', obsoleteDir, '--runtime', 'claude-code', '--tier', 'standard', '--lang', 'en']);
+  fs.mkdirSync(path.join(obsoleteDir, 'scripts'), { recursive: true });
+  const customScript = path.join(obsoleteDir, 'scripts', 'deprecated-tool.sh');
+  fs.writeFileSync(customScript, '#!/bin/bash\necho "deprecated"\n');
+  const obsoleteManifest = path.join(obsoleteDir, 'anr.yaml');
+  let obsYaml = fs.readFileSync(obsoleteManifest, 'utf8');
+  obsYaml = obsYaml.replace('managed_files:', 'managed_files:\n    - "scripts/deprecated-tool.sh"');
+  fs.writeFileSync(obsoleteManifest, obsYaml);
+
+  // Update without --prune: file must be detected as obsolete and preserved
+  const updateNoPrune = run('node', [BIN, 'update', obsoleteDir]);
+  check(updateNoPrune.status === 0, 'anr update with obsolete file should exit 0');
+  check(updateNoPrune.stdout.includes('Obsolete'), 'anr update should detect obsolete file');
+  check(fs.existsSync(customScript), 'anr update without --prune must not delete obsolete file');
+
+  // Update with --prune: managed obsolete file should be safely deleted
+  const updateWithPrune = run('node', [BIN, 'update', obsoleteDir, '--prune']);
+  check(updateWithPrune.status === 0, 'anr update --prune should exit 0');
+  check(!fs.existsSync(customScript), 'anr update --prune must remove managed obsolete file');
 } finally {
   fs.rmSync(tmpRoot, { recursive: true, force: true });
 }

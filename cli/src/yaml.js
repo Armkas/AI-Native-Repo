@@ -1,4 +1,22 @@
-// Zero-dependency, lightweight, strict YAML parser and validator for anr.yaml manifests.
+// Lightweight ANR Manifest Parser & Validator for anr.yaml
+// Supports standard ANR manifest subset: key-value maps, nested maps, block/flow sequences,
+// quote-escaped strings, and multi-line values.
+
+function stripComment(rawLine) {
+  let inSingle = false;
+  let inDouble = false;
+  for (let i = 0; i < rawLine.length; i++) {
+    const ch = rawLine[i];
+    if (ch === "'" && !inDouble) {
+      inSingle = !inSingle;
+    } else if (ch === '"' && !inSingle) {
+      inDouble = !inDouble;
+    } else if (ch === '#' && !inSingle && !inDouble) {
+      return rawLine.slice(0, i);
+    }
+  }
+  return rawLine;
+}
 
 function parseYAML(text) {
   const lines = text.split('\n');
@@ -8,7 +26,7 @@ function parseYAML(text) {
   for (let i = 0; i < lines.length; i++) {
     const rawLine = lines[i];
     // Strip comments, unless inside quotes
-    let line = rawLine.replace(/#.*$/, '').trimEnd();
+    let line = stripComment(rawLine).trimEnd();
     if (!line.trim()) continue;
 
     const indent = rawLine.search(/\S/);
@@ -26,7 +44,6 @@ function parseYAML(text) {
       const valStr = trimmed.slice(2).trim();
       const val = parseValue(valStr);
       if (!Array.isArray(currentContext.obj)) {
-        // If parent holds an array key, ensure it is array
         if (currentContext.key && !Array.isArray(currentContext.parent[currentContext.key])) {
           currentContext.parent[currentContext.key] = [];
           currentContext.obj = currentContext.parent[currentContext.key];
@@ -47,12 +64,38 @@ function parseYAML(text) {
     const key = trimmed.slice(0, colonIdx).trim();
     const rest = trimmed.slice(colonIdx + 1).trim();
 
-    if (rest === '') {
+    if (rest === '' || rest === '>' || rest === '|') {
+      // Check if following lines are a block scalar (indented text under > or |)
+      if (rest === '>' || rest === '|') {
+        let blockLines = [];
+        let j = i + 1;
+        while (j < lines.length) {
+          const nextRaw = lines[j];
+          const nextIndent = nextRaw.search(/\S/);
+          if (nextRaw.trim() === '') {
+            blockLines.push('');
+            j++;
+            continue;
+          }
+          if (nextIndent <= indent) break;
+          blockLines.push(stripComment(nextRaw).trim());
+          j++;
+        }
+        const blockVal = rest === '>' ? blockLines.join(' ').trim() : blockLines.join('\n').trim();
+        if (Array.isArray(currentContext.obj)) {
+          currentContext.obj.push({ [key]: blockVal });
+        } else {
+          currentContext.obj[key] = blockVal;
+        }
+        i = j - 1;
+        continue;
+      }
+
       // Nested object or list follows
       // Look ahead to next non-empty line to check if it's an array
       let isNextArray = false;
       for (let j = i + 1; j < lines.length; j++) {
-        const nextTrim = lines[j].replace(/#.*$/, '').trim();
+        const nextTrim = stripComment(lines[j]).trim();
         if (nextTrim) {
           if (nextTrim.startsWith('- ')) isNextArray = true;
           break;
@@ -86,6 +129,11 @@ function parseValue(valStr) {
   if (/^-?\d+(\.\d+)?$/.test(valStr)) return Number(valStr);
   if ((valStr.startsWith('"') && valStr.endsWith('"')) || (valStr.startsWith("'") && valStr.endsWith("'"))) {
     return valStr.slice(1, -1);
+  }
+  if (valStr.startsWith('[') && valStr.endsWith(']')) {
+    const inner = valStr.slice(1, -1).trim();
+    if (!inner) return [];
+    return inner.split(',').map(item => parseValue(item.trim()));
   }
   return valStr;
 }
@@ -199,8 +247,69 @@ function validateManifest(manifest, catalog) {
   };
 }
 
+function parseSkillFrontmatter(content, expectedDirName) {
+  if (!content.startsWith('---')) {
+    return { valid: false, error: 'missing opening frontmatter ---' };
+  }
+  const endIdx = content.indexOf('\n---', 3);
+  if (endIdx === -1) {
+    return { valid: false, error: 'missing closing frontmatter ---' };
+  }
+  const fmText = content.slice(3, endIdx).trim();
+
+  let name = '';
+  let description = '';
+  let currentKey = null;
+  let multilineVal = [];
+
+  function flushKey() {
+    if (currentKey === 'name') {
+      name = multilineVal.join(' ').trim().replace(/^["']|["']$/g, '');
+    } else if (currentKey === 'description') {
+      description = multilineVal.join(' ').trim().replace(/^["']|["']$/g, '');
+    }
+    multilineVal = [];
+  }
+
+  for (const line of fmText.split('\n')) {
+    const colonMatch = line.match(/^([a-z0-9_-]+):\s*(.*)$/i);
+    if (colonMatch) {
+      flushKey();
+      currentKey = colonMatch[1].toLowerCase();
+      const val = colonMatch[2].trim();
+      if (val !== '>' && val !== '|') {
+        multilineVal.push(val);
+      }
+    } else if (currentKey && /^\s+/.test(line)) {
+      multilineVal.push(line.trim());
+    }
+  }
+  flushKey();
+
+  // Official Agent Skills standard constraints:
+  // - 1-64 characters
+  // - Lowercase alphanumeric and hyphens
+  // - Cannot start or end with hyphen
+  // - Cannot have consecutive hyphens
+  // - Must match directory name
+  const nameRegex = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+  if (!name || !nameRegex.test(name) || name.length > 64) {
+    return { valid: false, name, description, error: `invalid name '${name}' (must match /^[a-z0-9]+(-[a-z0-9]+)*$/ and length <= 64)` };
+  }
+  if (expectedDirName && name !== expectedDirName) {
+    return { valid: false, name, description, error: `name '${name}' does not match directory '${expectedDirName}'` };
+  }
+
+  if (!description || description.length === 0 || description.length > 1024) {
+    return { valid: false, name, description, error: `description must be between 1 and 1024 characters (current: ${description.length})` };
+  }
+
+  return { valid: true, name, description };
+}
+
 module.exports = {
   parseYAML,
   stringifyYAML,
-  validateManifest
+  validateManifest,
+  parseSkillFrontmatter
 };

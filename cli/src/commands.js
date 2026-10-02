@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
-const { parseYAML, stringifyYAML, validateManifest } = require('./yaml.js');
+const { parseYAML, stringifyYAML, validateManifest, parseSkillFrontmatter } = require('./yaml.js');
 
 // Load canonical catalog as Single Source of Truth
 const catalog = require('./runtime-catalog.json');
@@ -109,16 +109,11 @@ function doctorCommand() {
         continue;
       }
       const content = fs.readFileSync(skillFile, 'utf8');
-      const nameMatch = content.match(/^name:\s*(.+)$/m);
-      const descMatch = content.match(/^description:\s*(.+)$/m);
-      const name = nameMatch ? nameMatch[1].trim() : '';
-      const desc = descMatch ? descMatch[1].trim() : '';
-      const validName = /^[a-z0-9-]+$/.test(name) && name.length <= 64 && name === s.name;
-      const validDesc = desc.length > 0 && desc.length <= 1024;
-      if (validName && validDesc) {
+      const res = parseSkillFrontmatter(content, s.name);
+      if (res.valid) {
         console.log(`  ✓ ${s.name} (valid Agent Skills standard)`);
       } else {
-        console.log(`  ✗ ${s.name}: non-compliant frontmatter (name: '${name}', desc length: ${desc.length})`);
+        console.log(`  ✗ ${s.name}: non-compliant frontmatter (${res.error})`);
       }
     }
   }
@@ -204,14 +199,9 @@ function validateCommand(args) {
           fails++;
         } else {
           const content = fs.readFileSync(skillFile, 'utf8');
-          const nameMatch = content.match(/^name:\s*(.+)$/m);
-          const descMatch = content.match(/^description:\s*(.+)$/m);
-          const name = nameMatch ? nameMatch[1].trim() : '';
-          const desc = descMatch ? descMatch[1].trim() : '';
-          const validName = /^[a-z0-9-]+$/.test(name) && name.length <= 64 && name === s.name;
-          const validDesc = desc.length > 0 && desc.length <= 1024;
-          if (!validName || !validDesc) {
-            console.error(`❌ FAIL: Skill '${s.name}' violates Agent Skills standard (name='${name}', desc length=${desc.length}).`);
+          const res = parseSkillFrontmatter(content, s.name);
+          if (!res.valid) {
+            console.error(`❌ FAIL: Skill '${s.name}' violates Agent Skills standard: ${res.error}`);
             fails++;
           }
         }
@@ -293,10 +283,11 @@ async function initCommand(args) {
 
   // Preflight: Collect all file actions to prevent partial writes
   const actions = collectFileActions(templateDir, targetDir, lang, isForce);
+  const managedFiles = actions.map(a => a.relPath);
 
   // Manifest action
   const manifestPath = path.join(targetDir, 'anr.yaml');
-  const manifestContent = generateConsumerManifest(runtime, tier, lang);
+  const manifestContent = generateConsumerManifest(runtime, tier, lang, managedFiles);
   if (fs.existsSync(manifestPath)) {
     const existing = fs.readFileSync(manifestPath, 'utf8');
     if (existing === manifestContent) {
@@ -356,7 +347,7 @@ async function initCommand(args) {
   }
 }
 
-function generateConsumerManifest(runtime, tier, lang) {
+function generateConsumerManifest(runtime, tier, lang, managedFiles = []) {
   const runtimeEntry = catalog.runtimes[runtime].entrypoint || 'AGENTS.md';
   const manifestObj = {
     schema_version: '2.0',
@@ -377,7 +368,8 @@ function generateConsumerManifest(runtime, tier, lang) {
     },
     template: {
       version: CLI_VERSION,
-      sync_status: 'synced'
+      sync_status: 'synced',
+      managed_files: managedFiles.length > 0 ? managedFiles : undefined
     }
   };
   return stringifyYAML(manifestObj);
@@ -589,13 +581,47 @@ async function updateCommand(args) {
     process.exit(1);
   }
 
-  console.log(`\nAI-Native Repository Three-Way Update Engine`);
+  console.log(`\nAI-Native Repository Ownership-Aware Update Engine`);
   console.log(`Target   : ${targetDir}`);
   console.log(`Runtime  : ${info.runtime} | Tier: ${info.tier} | Lang: ${info.language}`);
   console.log(`Version  : ${info.version} -> ${CLI_VERSION}`);
   if (isDryRun) console.log(`[DRY RUN] Transaction preview only — zero files written.\n`);
 
   const actions = collectFileActions(templateDir, targetDir, info.language, isForce);
+  const newManagedSet = new Set(actions.map(a => a.relPath));
+
+  // Obsolete detection: files previously managed that are no longer in the template
+  const prevManagedFiles = (manifestObj.template && Array.isArray(manifestObj.template.managed_files))
+    ? manifestObj.template.managed_files
+    : [];
+
+  let obsoleteDetected = 0;
+  let pruned = 0;
+
+  for (const prevRel of prevManagedFiles) {
+    if (!newManagedSet.has(prevRel)) {
+      const destPath = path.join(targetDir, prevRel);
+      if (fs.existsSync(destPath)) {
+        obsoleteDetected++;
+        if (isPrune) {
+          const ownership = classifyOwnership(prevRel);
+          const isManagedInfra = ownership === 'managed' || prevRel.startsWith('scripts/') || prevRel.startsWith('.agents/');
+          if (isManagedInfra || isForce) {
+            console.log(`  - Prune  : ${prevRel} (obsolete in current template)`);
+            if (!isDryRun) {
+              fs.unlinkSync(destPath);
+            }
+            pruned++;
+          } else {
+            console.log(`  ! Obsolete (user-owned/modified, preserved): ${prevRel}`);
+          }
+        } else {
+          console.log(`  ⚠ Obsolete: ${prevRel} (no longer in template; pass --prune to clean up)`);
+        }
+      }
+    }
+  }
+
   let added = 0;
   let updated = 0;
   let merged = 0;
@@ -642,9 +668,11 @@ async function updateCommand(args) {
 
   linkSkills(targetDir, info.runtime, templateDir, isDryRun, isForce);
 
-  // Update manifest version and sync status
+  // Update manifest version, managed files inventory, and sync status
   if (!isDryRun) {
     manifestObj.template = manifestObj.template || {};
+    const unprunedObsolete = prevManagedFiles.filter(f => !newManagedSet.has(f) && fs.existsSync(path.join(targetDir, f)));
+    manifestObj.template.managed_files = Array.from(new Set([...newManagedSet, ...unprunedObsolete]));
     if (review === 0) {
       manifestObj.template.version = CLI_VERSION;
       manifestObj.template.sync_status = 'synced';
@@ -661,6 +689,13 @@ async function updateCommand(args) {
   console.log(`  ~ Merged  : ${merged} JSON config files`);
   console.log(`  ~ Updated : ${updated} managed files`);
   console.log(`  = In Sync : ${skipped} files`);
+  if (obsoleteDetected > 0) {
+    if (isPrune) {
+      console.log(`  - Pruned  : ${pruned} obsolete files`);
+    } else {
+      console.log(`  ⚠ Obsolete: ${obsoleteDetected} files detected (pass --prune to clean up)`);
+    }
+  }
   if (review > 0) {
     console.log(`  ! Review  : ${review} user-modified files preserved (sync status: partial)`);
   }

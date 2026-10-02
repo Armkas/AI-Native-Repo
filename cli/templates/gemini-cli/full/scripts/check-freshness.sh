@@ -45,15 +45,22 @@ done < "$TMP/docs" > "$TMP/abs"
 while IFS= read -r l; do fail "Absolute local path (use a relative link): $l"; done < "$TMP/abs"
 
 
-# 3. Skills must have valid frontmatter: name == directory, non-empty description.
+# 3. Skills must align with Agent Skills Open Standard:
+#    - Frontmatter exists
+#    - name matches directory
+#    - name is 1-64 chars, lowercase alphanumeric, single hyphens (no leading/trailing hyphen, no consecutive hyphens)
+#    - description is non-empty and <= 1024 chars
 for s in .agents/skills/*/SKILL.md; do
   [ -f "$s" ] || continue
   d=$(basename "$(dirname "$s")")
   head -1 "$s" | grep -q '^---$' || { fail "$s: missing frontmatter"; continue; }
-  n=$(awk 'NR>1 && /^---$/{exit} /^name:/{sub(/^name:[[:space:]]*/,""); print}' "$s")
-  desc=$(awk 'NR>1 && /^---$/{exit} /^description:/{sub(/^description:[[:space:]]*/,""); print}' "$s")
+  n=$(awk 'NR>1 && /^---$/{exit} /^name:/{sub(/^name:[[:space:]]*/,""); gsub(/^["'\'']+|["'\'']+$/,""); print}' "$s")
+  desc=$(awk 'NR>1 && /^---$/{exit} /^description:/{sub(/^description:[[:space:]]*/,""); gsub(/^["'\'']+|["'\'']+$/,""); print}' "$s")
   [ "$n" = "$d" ] || fail "$s: name '$n' does not match directory '$d'"
+  echo "$n" | grep -Eq '^[a-z0-9]+(-[a-z0-9]+)*$' || fail "$s: name '$n' violates Agent Skills format (must match /^[a-z0-9]+(-[a-z0-9]+)*$/)"
+  [ ${#n} -le 64 ] || fail "$s: name '$n' exceeds 64 chars (${#n})"
   [ -n "$desc" ] || fail "$s: empty description (runtimes use it to decide when to load the skill)"
+  [ ${#desc} -le 1024 ] || fail "$s: description exceeds 1024 chars (${#desc})"
 done
 
 # 4. The router must stay small (Rule 01: <= 2 KB / 2048 bytes).
