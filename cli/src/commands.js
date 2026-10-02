@@ -74,6 +74,9 @@ function doctorCommand() {
   // Consumer Diagnostics
   console.log(`ℹ️  Runtime: ${manifestInfo.runtime} | Tier: ${manifestInfo.tier} | Lang: ${manifestInfo.language}`);
   console.log(`ℹ️  Template Version: ${manifestInfo.version} (Sync Status: ${manifestInfo.syncStatus})`);
+  if (manifestInfo.obsoleteFiles && manifestInfo.obsoleteFiles.length > 0) {
+    console.log(`  ⚠ Unpruned obsolete files: ${manifestInfo.obsoleteFiles.join(', ')} (run 'anr update --prune')`);
+  }
 
   // Context Layer Checks
   const hasMap = fs.existsSync(path.join(cwd, 'docs', 'PROJECT_MAP.md'));
@@ -122,10 +125,15 @@ function doctorCommand() {
   const skillLinkRel = catalog.runtimes[manifestInfo.runtime].skill_link;
   if (skillLinkRel) {
     const linkPath = path.join(cwd, skillLinkRel);
+    const markerPath = path.join(linkPath, '.anr-managed-mirror');
     if (isSymlink(linkPath)) {
       console.log(`  ✓ ${skillLinkRel} symlink healthy`);
     } else if (fs.existsSync(linkPath)) {
-      console.log(`  ✓ ${skillLinkRel} managed copy mirror active (auto-synchronized on update)`);
+      if (fs.existsSync(markerPath) || manifestInfo.skillMirror === 'managed-copy') {
+        console.log(`  ✓ ${skillLinkRel} managed copy mirror active (auto-synchronized on update)`);
+      } else {
+        console.log(`  ℹ ${skillLinkRel} is user-owned (preserved without ANR management)`);
+      }
     } else {
       console.log(`  ✗ ${skillLinkRel} missing`);
     }
@@ -436,6 +444,7 @@ function linkSkills(targetDir, runtime, templateDir, isDryRun, isForce) {
   const linkPath = path.join(targetDir, linkRel);
   const canonical = path.join(targetDir, '.agents', 'skills');
   const relTarget = path.relative(path.dirname(linkPath), canonical);
+  const markerPath = path.join(linkPath, '.anr-managed-mirror');
 
   if (isSymlink(linkPath)) {
     try {
@@ -457,8 +466,9 @@ function linkSkills(targetDir, runtime, templateDir, isDryRun, isForce) {
       }
     }
   } else if (fs.existsSync(linkPath)) {
+    const isManagedMirror = fs.existsSync(markerPath);
     if (isForce) {
-      console.log(`  Relink   : Replacing concrete directory ${linkRel} with symlink -> ${relTarget}`);
+      console.log(`  Relink   : Replacing concrete directory ${linkRel} with symlink -> ${relTarget} (--force)`);
       if (!isDryRun) {
         fs.rmSync(linkPath, { recursive: true, force: true });
         try {
@@ -466,17 +476,23 @@ function linkSkills(targetDir, runtime, templateDir, isDryRun, isForce) {
           return;
         } catch (err) {
           fs.cpSync(canonical, linkPath, { recursive: true });
+          fs.writeFileSync(markerPath, JSON.stringify({ managed_by: 'anr', source: '.agents/skills', updated_at: new Date().toISOString() }, null, 2));
           console.log(`  Note     : symlinks unavailable, refreshed managed copy mirror at ${linkRel}`);
           return;
         }
       }
       return;
-    } else {
+    } else if (isManagedMirror) {
       console.log(`  Sync     : Synchronizing managed copy mirror ${linkRel} from ${canonical}`);
       if (!isDryRun) {
         fs.rmSync(linkPath, { recursive: true, force: true });
         fs.cpSync(canonical, linkPath, { recursive: true });
+        fs.writeFileSync(markerPath, JSON.stringify({ managed_by: 'anr', source: '.agents/skills', updated_at: new Date().toISOString() }, null, 2));
       }
+      return;
+    } else {
+      console.log(`  Preserve : ${linkRel} is user-owned (existing directory without ANR marker).`);
+      console.log(`             Preserving custom contents; ANR will not overwrite. Pass --force to replace.`);
       return;
     }
   }
@@ -488,6 +504,7 @@ function linkSkills(targetDir, runtime, templateDir, isDryRun, isForce) {
     fs.symlinkSync(relTarget, linkPath, 'dir');
   } catch (err) {
     fs.cpSync(canonical, linkPath, { recursive: true });
+    fs.writeFileSync(markerPath, JSON.stringify({ managed_by: 'anr', source: '.agents/skills', created_at: new Date().toISOString() }, null, 2));
     console.log(`  Note     : symlinks unavailable, created managed copy mirror at ${linkRel}`);
   }
 }
@@ -691,18 +708,26 @@ async function updateCommand(args) {
 
   linkSkills(targetDir, info.runtime, templateDir, isDryRun, isForce);
 
+  const unprunedObsolete = prevManagedFiles.filter(f => !newManagedSet.has(f) && fs.existsSync(path.join(targetDir, f)));
+  const isFullySynced = review === 0 && unprunedObsolete.length === 0;
+
   // Update manifest version, managed files inventory, and sync status
   if (!isDryRun) {
     manifestObj.template = manifestObj.template || {};
-    const unprunedObsolete = prevManagedFiles.filter(f => !newManagedSet.has(f) && fs.existsSync(path.join(targetDir, f)));
     manifestObj.template.managed_files = Array.from(new Set([...newManagedSet, ...unprunedObsolete]));
-    if (review === 0) {
+    if (isFullySynced) {
       manifestObj.template.version = CLI_VERSION;
       manifestObj.template.sync_status = 'synced';
       delete manifestObj.template.available_version;
+      delete manifestObj.template.obsolete_files;
     } else {
       manifestObj.template.available_version = CLI_VERSION;
       manifestObj.template.sync_status = 'partial';
+      if (unprunedObsolete.length > 0) {
+        manifestObj.template.obsolete_files = unprunedObsolete;
+      } else {
+        delete manifestObj.template.obsolete_files;
+      }
     }
     fs.writeFileSync(manifestPath, stringifyYAML(manifestObj));
   }
@@ -723,7 +748,7 @@ async function updateCommand(args) {
     console.log(`  ! Review  : ${review} user-modified files preserved (sync status: partial)`);
   }
   if (!isDryRun) {
-    console.log(`\n🎉 Repository sync complete (Template: ${review === 0 ? CLI_VERSION : info.version}, Status: ${review === 0 ? 'synced' : 'partial'}).`);
+    console.log(`\n🎉 Repository sync complete (Template: ${isFullySynced ? CLI_VERSION : info.version}, Status: ${isFullySynced ? 'synced' : 'partial'}).`);
   }
 }
 

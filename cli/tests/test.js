@@ -286,11 +286,17 @@ try {
   check(updateNoPrune.status === 0, 'anr update with obsolete file should exit 0');
   check(updateNoPrune.stdout.includes('Obsolete'), 'anr update should detect obsolete file');
   check(fs.existsSync(customScript), 'anr update without --prune must not delete obsolete file');
+  const manifestNoPrune = fs.readFileSync(obsoleteManifest, 'utf8');
+  check(manifestNoPrune.includes('sync_status: "partial"'), 'update without prune should have sync_status: partial when obsolete files remain');
+  check(manifestNoPrune.includes('scripts/deprecated-tool.sh'), 'obsolete file should be recorded in manifest obsolete_files');
 
   // Update with --prune: managed obsolete file should be safely deleted
   const updateWithPrune = run('node', [BIN, 'update', obsoleteDir, '--prune']);
   check(updateWithPrune.status === 0, 'anr update --prune should exit 0');
   check(!fs.existsSync(customScript), 'anr update --prune must remove managed obsolete file');
+  const manifestWithPrune = fs.readFileSync(obsoleteManifest, 'utf8');
+  check(manifestWithPrune.includes('sync_status: "synced"'), 'update with prune should transition sync_status to synced');
+  check(!manifestWithPrune.includes('obsolete_files:'), 'obsolete_files should be cleaned up after prune');
 
   // 10. Malformed JSON Safety: Must abort and never overwrite invalid user config with template
   const invalidJsonDir = path.join(cliTestDir, 'invalid-json-target');
@@ -303,21 +309,31 @@ try {
   check(badJsonRun.status !== 0, 'anr update on malformed user JSON config must fail and exit non-zero');
   check(fs.readFileSync(corruptSettingsPath, 'utf8') === badJsonContent, 'anr update must preserve malformed user config without overwriting');
 
-  // 11. Managed Copy Mirror Sync: Directory mirror must synchronize from .agents/skills on update
+  // 11. User-Owned Skill Directory Protection & Managed Copy Mirror Sync
   const mirrorDir = path.join(cliTestDir, 'mirror-target');
   fs.mkdirSync(mirrorDir, { recursive: true });
   run('node', [BIN, 'init', mirrorDir, '--runtime', 'claude-code', '--tier', 'standard', '--lang', 'en']);
   const claudeSkillsPath = path.join(mirrorDir, '.claude', 'skills');
-  // Replace symlink with concrete directory to simulate Windows copy-fallback environment
+
+  // 11a. User-owned directory protection: directory without ANR marker must NOT be deleted or overwritten
   fs.rmSync(claudeSkillsPath, { recursive: true, force: true });
   fs.mkdirSync(claudeSkillsPath, { recursive: true });
-  // Add a newly added canonical skill
+  const userSkillFile = path.join(claudeSkillsPath, 'my-user-skill', 'SKILL.md');
+  fs.mkdirSync(path.dirname(userSkillFile), { recursive: true });
+  fs.writeFileSync(userSkillFile, '# User Owned Skill\n');
+
+  const userOwnedUpdate = run('node', [BIN, 'update', mirrorDir]);
+  check(userOwnedUpdate.status === 0, 'anr update with user-owned skill directory should exit 0');
+  check(fs.existsSync(userSkillFile), 'anr update must preserve user-owned skill directory without deleting or overwriting');
+
+  // 11b. Managed copy mirror: directory WITH .anr-managed-mirror marker is safely synchronized
+  fs.writeFileSync(path.join(claudeSkillsPath, '.anr-managed-mirror'), JSON.stringify({ managed_by: 'anr' }));
   const canonicalSkill = path.join(mirrorDir, '.agents', 'skills', 'test-sync', 'SKILL.md');
   fs.mkdirSync(path.dirname(canonicalSkill), { recursive: true });
   fs.writeFileSync(canonicalSkill, '---\nname: "test-sync"\ndescription: "A skill for testing mirror sync."\n---\n# Test\n');
   const mirrorUpdateRun = run('node', [BIN, 'update', mirrorDir]);
-  check(mirrorUpdateRun.status === 0, 'anr update on concrete mirror directory should succeed');
-  check(fs.existsSync(path.join(claudeSkillsPath, 'test-sync', 'SKILL.md')), 'anr update must synchronize concrete mirror directory from .agents/skills');
+  check(mirrorUpdateRun.status === 0, 'anr update on concrete managed mirror directory should succeed');
+  check(fs.existsSync(path.join(claudeSkillsPath, 'test-sync', 'SKILL.md')), 'anr update must synchronize concrete managed mirror directory from .agents/skills');
 
   // 12. Strict Manifest Schema Validation
   const strictTestDir = path.join(cliTestDir, 'strict-schema-target');

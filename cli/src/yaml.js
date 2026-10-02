@@ -282,6 +282,24 @@ function validateManifest(manifest, catalog) {
     throw new Error(`Invalid template.available_version: expected string, got ${typeof manifest.template.available_version}.`);
   }
 
+  if (manifest.template.skill_mirror !== undefined) {
+    const validModes = ['symlink', 'managed-copy', 'user-owned'];
+    if (!validModes.includes(manifest.template.skill_mirror)) {
+      throw new Error(`Invalid template.skill_mirror '${manifest.template.skill_mirror}'. Expected one of: ${validModes.join(', ')}.`);
+    }
+  }
+
+  if (manifest.template.obsolete_files !== undefined) {
+    if (!Array.isArray(manifest.template.obsolete_files)) {
+      throw new Error("Invalid 'template.obsolete_files': expected array of relative file paths.");
+    }
+    for (const f of manifest.template.obsolete_files) {
+      if (!isSafeRelativePath(f)) {
+        throw new Error(`Invalid path in 'template.obsolete_files': expected safe relative path, got '${f}'.`);
+      }
+    }
+  }
+
   if (manifest.template.managed_files !== undefined) {
     if (!Array.isArray(manifest.template.managed_files)) {
       throw new Error("Invalid 'template.managed_files': expected array of relative file paths.");
@@ -299,7 +317,9 @@ function validateManifest(manifest, catalog) {
     tier: rTier,
     language: rLang,
     version: manifest.template.version,
-    syncStatus: manifest.template.sync_status || 'synced'
+    syncStatus: manifest.template.sync_status || 'synced',
+    skillMirror: manifest.template.skill_mirror,
+    obsoleteFiles: manifest.template.obsolete_files || []
   };
 }
 
