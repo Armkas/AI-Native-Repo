@@ -61,10 +61,21 @@ function validateCommand(args) {
   const isCI = args.includes('--ci');
   const cwd = process.cwd();
   
-  // 1. If we are in the Reference Repository, call the canonical bash validator
+  // 1. Check if this is the Reference Repository via explicit machine-readable manifest (anr.yaml)
+  const manifestPath = path.join(cwd, 'anr.yaml');
+  let isReferenceRepo = false;
+  if (fs.existsSync(manifestPath)) {
+    try {
+      const manifestText = fs.readFileSync(manifestPath, 'utf8');
+      if (/kind:\s*["']?reference-repository["']?/.test(manifestText)) {
+        isReferenceRepo = true;
+      }
+    } catch {}
+  }
+
   const canonicalScript = path.join(cwd, 'scripts', 'validate.sh');
-  if (fs.existsSync(canonicalScript)) {
-    if (!isCI) console.log("Running canonical validator (scripts/validate.sh)...");
+  if (isReferenceRepo && fs.existsSync(canonicalScript)) {
+    if (!isCI) console.log("Running canonical reference validator (scripts/validate.sh)...");
     try {
       const { execSync } = require('child_process');
       execSync(`bash "${canonicalScript}"`, { stdio: 'inherit' });
@@ -76,14 +87,60 @@ function validateCommand(args) {
     }
   }
 
-  // 2. Otherwise (Consumer Repository), do standard manifest checks
+  // 2. Otherwise (Consumer Repository), perform comprehensive AI-Native validation
   let fails = 0;
-  const manifestPath = path.join(cwd, 'anr.yaml');
   if (!fs.existsSync(manifestPath)) {
-    console.error("❌ FAIL: anr.yaml missing.");
+    console.error("❌ FAIL: anr.yaml missing. Run `anr init .` to scaffold.");
     fails++;
   } else {
     if (!isCI) console.log("✅ PASS: anr.yaml exists.");
+    try {
+      const manifestText = fs.readFileSync(manifestPath, 'utf8');
+      if (!/schema_version:\s*["']?2\.0["']?/.test(manifestText)) {
+        console.error("❌ FAIL: anr.yaml missing schema_version: 2.0.");
+        fails++;
+      }
+      if (!/runtime:\s*\n\s*name:/.test(manifestText) && !/runtime:/.test(manifestText)) {
+        console.error("❌ FAIL: anr.yaml missing runtime declaration.");
+        fails++;
+      }
+    } catch (e) {
+      console.error("❌ FAIL: anr.yaml could not be read.");
+      fails++;
+    }
+  }
+
+  // Validate canonical router (AGENTS.md budget <= 2KB / 2048 bytes per Rule 01)
+  const agentsPath = path.join(cwd, 'AGENTS.md');
+  if (fs.existsSync(agentsPath)) {
+    const size = fs.statSync(agentsPath).size;
+    if (size > 2048) {
+      console.error(`❌ FAIL: AGENTS.md is ${size} bytes (> 2048 bytes / 2 KB budget).`);
+      fails++;
+    } else {
+      if (!isCI) console.log(`✅ PASS: AGENTS.md router is within 2 KB budget (${size} bytes).`);
+    }
+  }
+
+  // Validate skills directory and frontmatter if present
+  const skillsDir = path.join(cwd, '.agents', 'skills');
+  if (fs.existsSync(skillsDir)) {
+    try {
+      const skills = fs.readdirSync(skillsDir, { withFileTypes: true }).filter(d => d.isDirectory());
+      for (const s of skills) {
+        const skillFile = path.join(skillsDir, s.name, 'SKILL.md');
+        if (!fs.existsSync(skillFile)) {
+          console.error(`❌ FAIL: Skill '${s.name}' missing SKILL.md`);
+          fails++;
+        } else {
+          const content = fs.readFileSync(skillFile, 'utf8');
+          if (!/^---\n[\s\S]*?name:\s*.+[\s\S]*?description:\s*.+[\s\S]*?---/.test(content)) {
+            console.error(`❌ FAIL: Skill '${s.name}/SKILL.md' missing valid name/description frontmatter.`);
+            fails++;
+          }
+        }
+      }
+    } catch {}
   }
 
   const freshness = path.join(cwd, 'scripts', 'check-freshness.sh');
@@ -100,7 +157,7 @@ function validateCommand(args) {
     if (!isCI) console.log(`\n❌ VALIDATION FAILED with ${fails} errors.`);
     process.exit(1);
   } else {
-    if (!isCI) console.log("\n🎉 VALIDATION PASSED!");
+    if (!isCI) console.log("\n🎉 VALIDATION PASSED! The project satisfies the AI-Native specification.");
     process.exit(0);
   }
 }
@@ -217,11 +274,32 @@ async function initCommand(args) {
     if (!linkRel || !fs.existsSync(path.join(templateDir, '.agents', 'skills'))) return;
     const linkPath = path.join(targetDir, linkRel);
     const canonical = path.join(targetDir, '.agents', 'skills');
-    if (fs.existsSync(linkPath) || isSymlink(linkPath)) {
-      console.log(`  Skip     : ${linkRel} (already exists)`);
+    const relTarget = path.relative(path.dirname(linkPath), canonical);
+
+    if (isSymlink(linkPath)) {
+      try {
+        const currentTarget = fs.readlinkSync(linkPath);
+        if (currentTarget === relTarget) {
+          console.log(`  Skip     : ${linkRel} (already correctly linked)`);
+          return;
+        } else {
+          console.log(`  Relink   : ${linkRel} was pointing to '${currentTarget}', fixing to '${relTarget}'`);
+          if (!isDryRun) {
+            fs.unlinkSync(linkPath);
+            fs.symlinkSync(relTarget, linkPath, 'dir');
+          }
+          return;
+        }
+      } catch (err) {
+        if (!isDryRun) {
+          try { fs.unlinkSync(linkPath); } catch {}
+        }
+      }
+    } else if (fs.existsSync(linkPath)) {
+      console.log(`  Skip     : ${linkRel} (already exists as concrete directory)`);
       return;
     }
-    const relTarget = path.relative(path.dirname(linkPath), canonical);
+
     console.log(`  Link     : ${linkRel} -> ${relTarget}`);
     if (isDryRun) return;
     fs.mkdirSync(path.dirname(linkPath), { recursive: true });

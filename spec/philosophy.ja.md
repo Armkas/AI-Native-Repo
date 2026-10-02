@@ -645,18 +645,15 @@ iOS のみ:   docs/ ios/
 
 ## 52. ドキュメントシステムは自動検証可能であるべき
 
-将来の `anr validate`：Interface は存在するか？各ドメインにドキュメントはあるか？
-`AGENTS.md` は有効か？ADR は完全か？アーキテクチャに違反するディレクトリはないか？
-依存はレイヤーをまたいでいないか？
+`anr validate`（実装済み）：Interface 規約と Domain ドキュメントの完全性を検証し、`AGENTS.md` ルーターのサイズ予算をチェック、鮮度検証スクリプトを実行。
 
 ## 53. ドキュメントシステムは自動生成可能であるべき
 
-将来の `anr index`：`context-index.md`、`symbol-index.md`、`dependency-map.md` を生成。
+`anr index`（計画中）：`context-index.md`、`symbol-index.md`、`dependency-map.md` を自動生成。
 
 ## 54. 初期化機能を提供する
 
-将来の `anr init`：`AGENTS.md`、`.agents/`、`docs/` を生成し、どんなプロジェクトも
-すぐに AI-friendly 構造へ移行できるようにする。
+`anr init`（実装済み）：12種類のテンプレートマトリックスから `AGENTS.md`、`.agents/`、`docs/` をスキャフォールドし、あらゆるプロジェクトを即座に AI-Native 構造へ移行。
 
 ---
 

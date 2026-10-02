@@ -663,17 +663,15 @@ L5 只读那一处实现
 
 ## 52. 文档系统应可自动验证
 
-未来 `anr validate`：Interface 是否存在？每个 Domain 是否有文档？`AGENTS.md` 是否有效？
-ADR 是否完整？目录是否违反架构？依赖是否跨层？
+`anr validate`（当前）：验证 Interface 契约与 Domain 文档完整性，检查 `AGENTS.md` 路由器尺寸预算，执行新鲜度检查脚本。
 
 ## 53. 文档系统应可自动生成
 
-未来 `anr index`：生成 `context-index.md`、`symbol-index.md`、`dependency-map.md`。
+`anr index`（计划中）：自动提取符号与拓扑，生成 `context-index.md`、`symbol-index.md`、`dependency-map.md`。
 
-## 54. 提供初始化能力
+## 54. 提供初始化与脚手架能力
 
-未来 `anr init`：生成 `AGENTS.md`、`.agents/`、`docs/`，让任何项目立即进入
-AI-Friendly 结构。
+`anr init`（当前）：交互式或参数化一键搭建 12 套模板矩阵，生成 `AGENTS.md`、`.agents/`、`docs/`，让任何项目立即拥有 AI-Native 原生结构。
 
 ---
 

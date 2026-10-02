@@ -663,17 +663,15 @@ Human: why, intent, business rules, architecture decisions.
 
 ## 51. The doc system should be auto-verifiable
 
-Future `anr validate`: do interfaces exist? does every domain have a doc? is `AGENTS.md` valid?
-are ADRs complete? does any directory violate the architecture? do dependencies cross layers?
+`anr validate` (Current): verify interface contracts, domain doc integrity, `AGENTS.md` router size budget, and execute freshness check scripts.
 
 ## 52. The doc system should be auto-generatable
 
-Future `anr index`: generate `context-index.md`, `symbol-index.md`, `dependency-map.md`.
+`anr index` (Planned): generate `context-index.md`, `symbol-index.md`, and `dependency-map.md`.
 
 ## 53. Provide an init capability
 
-Future `anr init`: scaffold `AGENTS.md`, `.agents/`, `docs/` so any project can enter the
-AI-friendly structure immediately.
+`anr init` (Current): scaffold `AGENTS.md`, `.agents/`, `docs/` across 12 template combinations so any project can adopt the AI-Native structure immediately.
 
 ---
 

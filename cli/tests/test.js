@@ -9,7 +9,7 @@ const { spawnSync } = require('child_process');
 const BIN = path.join(__dirname, '..', 'bin', 'anr.js');
 const RUNTIMES = ['claude-code', 'codex', 'gemini-cli', 'cursor'];
 const TIERS = ['light', 'standard', 'full'];
-const LANGS = ['en', 'zh-CN'];
+const LANGS = ['en', 'zh-CN', 'ja'];
 const ENTRY = { 'claude-code': 'CLAUDE.md', codex: 'AGENTS.md', 'gemini-cli': 'GEMINI.md', cursor: '.cursor/rules/core.mdc' };
 const SKILL_LINKS = { 'claude-code': '.claude/skills' };
 // Native pre-edit hook config per runtime (full tier).
@@ -72,6 +72,7 @@ try {
         const agents = path.join(dir, 'AGENTS.md');
         check(fs.statSync(agents).size <= 2048, `${label}: AGENTS.md exceeds 2 KB router budget`);
         if (lang === 'zh-CN') check(/[一-鿿]/.test(fs.readFileSync(agents, 'utf8')), `${label}: AGENTS.md is not the zh-CN variant`);
+        if (lang === 'ja') check(/[ぁ-んァ-ヶ]/.test(fs.readFileSync(path.join(dir, 'MANUAL_TASKS.md'), 'utf8')), `${label}: MANUAL_TASKS.md is not the ja variant`);
 
         const variants = walk(dir).filter(f => /\.(zh-CN|ja)\.[^.]+$/.test(f));
         check(variants.length === 0, `${label}: leftover language variants: ${variants.map(f => path.relative(dir, f)).join(', ')}`);
