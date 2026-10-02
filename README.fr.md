@@ -48,9 +48,9 @@ La plupart des modèles de prompts échouent sur des projets réels complexes po
 ### 1. Révélation Progressive du Contexte (Progressive Context Disclosure) — Préserver l'attention de l'IA
 > **Context Must Be Earned (Le contexte doit être mérité à la demande).**
 
-Ne donnez jamais à un agent un prompt monolithique de 100 000 mots. Le point d'entrée global (`AGENTS.md`) est strictement limité à **< 2 Ko** pour agir comme un contrôleur aérien ultra-léger. L'agent découvre le contexte couche par couche à la demande, sans jamais tout charger d'un coup :
+Ne donnez jamais à un agent un prompt monolithique de 100 000 mots. Le point d'entrée global (`AGENTS.md`) est strictement limité à **<= 2048 bytes (2 KiB)** pour agir comme un contrôleur aérien ultra-léger. L'agent découvre le contexte couche par couche à la demande, sans jamais tout charger d'un coup :
 
-* **L0: Agent Rules (< 2 Ko)** → Comment l'IA doit-elle se comporter ? (Règles globales et routage)
+* **L0: Agent Rules (<= 2048 bytes)** → Comment l'IA doit-elle se comporter ? (Règles globales et routage)
 * **L1: Project Map (< 100 lignes)** → Quel est ce projet et où se trouvent les composants ? (Carte physique)
 * **L2: Architecture / Domain** → Quel problème métier ce domaine résout-il ?
 * **L3: Interface / Contract** → Comment les composants communiquent-ils entre eux ?

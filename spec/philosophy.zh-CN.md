@@ -535,19 +535,17 @@ AI-Native 仓库应避免大型手动维护的源文件。
 
 # 十五、文档与代码冲突
 
-## 42. 文档不是绝对真理
+## 42. 权威性与验证证据：解决文档与代码冲突 (Authority & Evidence)
 
-它可能过期。事实层级：
+文档与代码可能随时间产生漂移。当意图与行为发生冲突时，绝不能主观臆断任一方为绝对真理：
 
-```text
-实际测试 / 实际行为
- → 当前实现
- → Contract
- → 文档
- → 注释
-```
+- **规范意图 (Normative Intent)**（`docs/contracts/`、`docs/invariants/`）：系统在架构设计上被要求达成的标准。
+- **物理实现 (Implementation)**（`src/`）：当前具体的代码执行逻辑。
+- **验证证据 (Verification Evidence)**（`tests/`、`scripts/validate.sh`）：通过测试套件与自动化工具所证明的实际运行时行为。
+- **描述性文档与注释 (Descriptive Docs & Comments)**：人类辅助理解的非强制性解释，容易过时。
 
-发现冲突时，不要偷偷修改其中一边。识别冲突并修正正确的 Source of Truth。
+当发现意图与代码冲突时：**切勿悄悄篡改任何一方。** 必须先定位问题是属于代码回归故障（Regression），还是业务契约升级但文档未同步。修复真正失真的一层，并以确定性退出码 `0` 重新建立闭环。
+
 
 ---
 
@@ -597,6 +595,13 @@ task → Agent Rules → Project Map → Domain → Interface → Invariant/ADR
 
 ## 44.2 文档防腐化机制 (Doc-Sync)
 只要改动了接口、契约或数据库结构，必须同步登记到地图与索引中，保持知识层与代码层的实时同构。
+
+## 44.3 验证的三大成熟度层级 (Three Levels of Verification)
+AI-Native 仓库的验证能力分为三大层级：
+1. **Level 1 — 静态验证 (Static Verification)**：新鲜度检查、死链检测、路由预算合规（<= 2048 bytes）、Manifest Schema 校验以及 Agent Skills 规范性审查。
+2. **Level 2 — 适配器与基础设施验证 (Adapter & Infrastructure Verification)**：运行时原生 Hook（编辑前拦截 exit 2）、跨工具技能软链接、以及 Shell 绕不过去的云端 CI 护栏（`guard-paths.sh ci`）。
+3. **Level 3 — 运行时行为级评估 (Runtime Behavioral Verification)**：在真实的 Agent CLI 环境中运行任务端到端 Eval，断言工具调用时序、上下文读取路径与权限决策。
+
 
 ## 45. 没有理由不要扫描整个仓库
 

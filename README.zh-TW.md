@@ -48,9 +48,9 @@ npx ai-native-repo init . --runtime claude-code --tier full --lang zh-CN   # en 
 ### 1. 上下文漸進式披露 (Progressive Context Disclosure) —— 保護 AI 注意力
 > **Context Must Be Earned（上下文必須按需獲取）。**
 
-不要給 AI 塞入幾萬字的超級大文件。全域入口（`AGENTS.md`）嚴格限制在 **< 2 KB**，充當極簡的「空中交通管制員（Traffic Controller）」。AI 根據任務按需逐層展開上下文，絕不一次性全量載入：
+不要給 AI 塞入幾萬字的超級大文件。全域入口（`AGENTS.md`）嚴格限制在 **<= 2048 bytes (2 KiB)**，充當極簡的「空中交通管制員（Traffic Controller）」。AI 根據任務按需逐層展開上下文，絕不一次性全量載入：
 
-* **L0: Agent Rules (< 2KB)** → AI 怎麼工作？（行為紅線與全域路由）
+* **L0: Agent Rules (<= 2048 bytes)** → AI 怎麼工作？（行為紅線與全域路由）
 * **L1: Project Map (< 100行)** → 專案是什麼？核心組件在哪裡？（物理地圖）
 * **L2: Architecture / Domain** → 這個具體業務領域在解決什麼問題？
 * **L3: Interface / Contract** → 組件之間如何定義邊界與協議？

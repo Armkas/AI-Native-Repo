@@ -531,20 +531,17 @@ regenerate.
 
 # XV. Doc / Code Conflicts
 
-## 41. Documentation is not absolute truth
+## 41. Authority & Evidence: Resolving Doc / Code Conflicts
 
-It can be stale. The hierarchy of truth:
+Documentation and implementation can drift out of alignment. Do not blindly assume either documentation or test code is inherently infallible when they contradict each other:
 
-```text
-actual test / actual behavior
- → current implementation
- → contract
- → documentation
- → comments
-```
+- **Normative Intent** (`docs/contracts/`, `docs/invariants/`): What the system is architected and specified to do.
+- **Implementation** (`src/`): The current state of concrete code execution.
+- **Verification Evidence** (`tests/`, `scripts/validate.sh`): Automated proof establishing observed runtime behavior.
+- **Descriptive Documentation & Comments**: Informal explanations that may rot over time.
 
-On a conflict, do not silently patch one side. Identify the conflict and fix the correct
-source of truth.
+When a conflict is detected between intent and behavior: **do not silently patch one side.** Identify whether the code contains a regression or whether the contract evolved without updating the documentation. Repair the stale layer and confirm verification with a clean exit code `0`.
+
 
 ---
 
@@ -596,6 +593,13 @@ After modifying code, AI must execute explicit verification commands (typecheck,
 
 ## 43.2 Doc-Sync Anti-Corruption
 Whenever an interface, contract, or database schema changes, the corresponding index, map, and contract documents must be updated synchronously.
+
+## 43.3 The Three Levels of Verification
+Verification in an AI-Native repository is structured into three distinct maturity levels:
+1. **Level 1 — Static Verification**: Freshness checks, broken link detection, router budget enforcement (<= 2048 bytes), manifest schema validation, and Agent Skills frontmatter compliance.
+2. **Level 2 — Adapter & Infrastructure Verification**: Runtime hook wiring (pre-edit blocking via exit code 2), cross-runtime skill symlinks, and remote CI guardrails (`guard-paths.sh ci`) that cannot be bypassed by local shell commands.
+3. **Level 3 — Runtime Behavioral Verification**: End-to-end evaluation with live agent CLI execution, asserting tool call sequences, context loading behavior, and permission boundary enforcement.
+
 
 ## 44. Do not scan the whole repo without a reason
 

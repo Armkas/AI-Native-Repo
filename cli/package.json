@@ -23,6 +23,6 @@
     "url": "git+https://github.com/Armkas/AI-Native-Repo.git"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   }
 }

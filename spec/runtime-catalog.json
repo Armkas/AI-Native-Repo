@@ -1,0 +1,44 @@
+{
+  "runtimes": {
+    "claude-code": {
+      "name": "Claude Code",
+      "entrypoint": "CLAUDE.md",
+      "skill_link": ".claude/skills",
+      "hook_config": ".claude/settings.json",
+      "native_skills": false
+    },
+    "codex": {
+      "name": "Codex",
+      "entrypoint": "AGENTS.md",
+      "skill_link": null,
+      "hook_config": ".codex/hooks.json",
+      "native_skills": true
+    },
+    "gemini-cli": {
+      "name": "Gemini CLI",
+      "entrypoint": "GEMINI.md",
+      "skill_link": null,
+      "hook_config": ".gemini/settings.json",
+      "native_skills": true
+    },
+    "cursor": {
+      "name": "Cursor",
+      "entrypoint": ".cursor/rules/core.mdc",
+      "skill_link": null,
+      "hook_config": ".cursor/hooks.json",
+      "native_skills": true
+    }
+  },
+  "tiers": ["light", "standard", "full"],
+  "languages": ["en", "zh-CN", "ja"],
+  "common_layers": {
+    "light": ["light"],
+    "standard": ["standard"],
+    "full": ["standard", "full"]
+  },
+  "runtime_layers": {
+    "light": ["base"],
+    "standard": ["base", "standard"],
+    "full": ["base", "standard", "full"]
+  }
+}

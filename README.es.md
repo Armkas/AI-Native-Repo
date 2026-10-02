@@ -48,9 +48,9 @@ La mayoría de las plantillas de prompts de IA fallan en proyectos complejos del
 ### 1. Revelación Progresiva del Contexto (Progressive Context Disclosure) — Preservar la atención de la IA
 > **Context Must Be Earned (El contexto debe ganarse bajo demanda).**
 
-Nunca alimentes a un agente con un prompt monolítico de 100.000 palabras. El punto de entrada global (`AGENTS.md`) está estrictamente limitado a **< 2 KB** para actuar como un controlador de tráfico aéreo ultraligero. El agente descubre el contexto capa por capa según sea necesario:
+Nunca alimentes a un agente con un prompt monolítico de 100.000 palabras. El punto de entrada global (`AGENTS.md`) está estrictamente limitado a **<= 2048 bytes (2 KiB)** para actuar como un controlador de tráfico aéreo ultraligero. El agente descubre el contexto capa por capa según sea necesario:
 
-* **L0: Agent Rules (< 2KB)** → ¿Cómo debe comportarse la IA? (Reglas globales y enrutamiento)
+* **L0: Agent Rules (<= 2048 bytes)** → ¿Cómo debe comportarse la IA? (Reglas globales y enrutamiento)
 * **L1: Project Map (< 100 líneas)** → ¿Qué es este proyecto y dónde está cada cosa? (Mapa físico)
 * **L2: Architecture / Domain** → ¿Qué problema de negocio resuelve este dominio?
 * **L3: Interface / Contract** → ¿Cómo se comunican los componentes entre sí?

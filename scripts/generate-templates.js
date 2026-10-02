@@ -8,11 +8,13 @@
 const fs = require('fs');
 const path = require('path');
 
-const runtimes = ['claude-code', 'codex', 'gemini-cli', 'cursor'];
-const tiers = ['light', 'standard', 'full'];
-const COMMON_LAYERS = { light: ['light'], standard: ['standard'], full: ['standard', 'full'] };
-const RUNTIME_LAYERS = { light: ['base'], standard: ['base', 'standard'], full: ['base', 'standard', 'full'] };
+const catalog = require('../spec/runtime-catalog.json');
+const runtimes = Object.keys(catalog.runtimes);
+const tiers = catalog.tiers;
+const COMMON_LAYERS = catalog.common_layers;
+const RUNTIME_LAYERS = catalog.runtime_layers;
 const IGNORED = new Set(['.DS_Store', 'Thumbs.db']);
+
 
 const srcDir = path.join(__dirname, '..', 'template-source');
 // Target directory defaults to cli/templates, or can be passed as argument (e.g. for pure validation)

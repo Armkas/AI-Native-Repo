@@ -47,25 +47,26 @@ Most AI prompt templates fail in complex real-world projects for two reasons: **
 ### 1. Progressive Context Disclosure — Preserving AI Attention
 > **Context Must Be Earned.**
 
-Never feed an AI agent a monolithic 100,000-word prompt. The global entrypoint (`AGENTS.md`) is strictly capped at **< 2 KB** to act as a lightweight "air traffic controller." The agent discovers context layer-by-layer on demand, never loading the entire world upfront:
+Never feed an AI agent a monolithic prompt. The global entrypoint (`AGENTS.md`) adheres to a strict design budget of **<= 2048 bytes (2 KiB)** to act as a lightweight "air traffic controller." The agent discovers context layer-by-layer on demand, never loading the entire world upfront:
 
-* **L0: Agent Rules (< 2KB)** → How should the AI behave? (Global router & boundaries)
-* **L1: Project Map (< 100L)** → What is this project and where is everything? (Physical map)
+* **L0: Agent Rules (<= 2048 bytes)** → How should the AI behave? (Global router & boundaries)
+* **L1: Project Map (~100 lines)** → What is this project and where is everything? (Physical map)
 * **L2: Architecture/Domain** → What business problem does this domain solve?
 * **L3: Interface/Contract** → How do components talk to each other?
 * **L4: Invariants/Tests** → What rules must NEVER be broken? How to verify?
 * **L5: Implementation** → Actual source code
 
-**Only the context required for the current task is loaded.** This slashes token usage and eliminates attention degradation and hallucinations in large models.
+**Only the context required for the current task is loaded.** This reduces irrelevant context and repository-navigation ambiguity in large models.
 
-### 2. Progressive Repository Adoption — Frictionless Migration for Existing Projects
-> **No greenfield requirement. Any existing codebase can evolve in 10 minutes.**
+### 2. Progressive Repository Adoption — Low-Friction Migration for Existing Projects
+> **No greenfield requirement. Any existing codebase can adopt ANR incrementally.**
 
 You don't need to document your entire legacy codebase upfront. Through the **Tiered Complexity Model**, an existing repository adopts AI-native practices progressively:
 
-* **Day 1 (Tier 1: Light) — 10-Minute Setup**: Zero code rewrites. Scaffold a < 2KB router, let AI scan your existing tree to generate a realistic `PROJECT_MAP.md`, and set hard boundaries in `MANUAL_TASKS.md`. The AI immediately stops hallucinating project structure.
+* **Day 1 (Tier 1: Light) — Low-Friction Setup**: Zero code rewrites. Scaffold a <= 2048-byte router, let AI scan your existing tree to generate a realistic `PROJECT_MAP.md`, and set explicit boundaries in `MANUAL_TASKS.md`. Gives the agent an explicit map of the repository structure.
 * **Day 30 (Tier 2: Standard) — On-Demand Knowledge**: Only document what you touch. When the AI works on a specific module (e.g. auth), capture `domains/auth.md` in that PR, and enforce deterministic test loops via the `verify` skill.
-* **Day 90 (Tier 3: Full) — Enterprise Guardrails**: Once the team is comfortable, introduce path guardrails (read-only/append-only files) and automated freshness checks in CI.
+* **Day 90 (Tier 3: Full) — High-Maturity Guardrails**: Once the team is comfortable, introduce path guardrails (read-only/append-only files), native runtime hooks, and automated freshness checks in CI.
+
 
 ---
 

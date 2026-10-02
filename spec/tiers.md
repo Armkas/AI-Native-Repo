@@ -36,16 +36,17 @@ You choose a Tier based on your team's needs, not the tool you use.
 *Philosophy:* A balanced workspace where AI has structured knowledge and deterministic guardrails.
 
 ## Tier 3: Full
-**Goal:** Advanced, highly automated Agent Workspace.
-**Best for:** High-maturity, long-term, large-scale repositories.
+**Goal:** Advanced, high-maturity Agent Workspace with deterministic guardrails.
+**Best for:** High-maturity, long-term, large-scale production repositories.
 
 **Core Capabilities:**
-- **Context:** Generated context indexes, dependency maps, machine-readable manifest (`anr.yaml`), freshness checks.
+- **Context:** Generated context indexes, dependency maps, machine-readable manifest (`anr.yaml`), automated freshness checks.
 - **Rules:** Detailed scoped rules, strict distinction between Advisory Rules and Guardrails.
-- **Skills/Workflows:** Rich ecosystem of specialized agent sub-roles, MCP tool integrations, lifecycle hooks.
-- **Verification:** Strong CI, Agent Behavior Evaluation, static analysis.
-- **Human Boundary:** Strict permission boundaries and detailed approval flows.
+- **Skills/Workflows:** Full set of standard skills, lifecycle hooks, MCP tool integrations.
+- **Verification:** Level 1 (Static freshness & schema checks) + Level 2 (Native runtime pre-edit hooks & unbypassable CI guardrails).
+- **Human Boundary:** Strict permission boundaries and detailed manual task escalation.
 
-**Ships (`anr init --tier full`):** everything in Standard, plus `.agents/guardrails/protected-paths.txt` (read-only / append-only paths) enforced by `scripts/guard-paths.sh` (a native pre-edit hook in Claude Code, Gemini CLI and Codex; a CI step for Cursor and for edits made through the shell), and `scripts/check-freshness.sh` (broken links, absolute paths, malformed skills, oversized router, stale index paths, god files). Subagents, MCP servers and behavior evals are project-specific and are added by the team, not generated.
+**Ships (`anr init --tier full`):** everything in Standard, plus `.agents/guardrails/protected-paths.txt` (read-only / append-only paths) enforced by `scripts/guard-paths.sh` (wired as a native pre-edit hook in Claude Code, Codex, Gemini CLI, and Cursor), `.github/workflows/ai-guardrail.yml` (remote CI layer that shell edits cannot bypass), and `scripts/check-freshness.sh` (detects broken links, absolute paths, malformed skills, oversized router, stale index paths, and god files).
 
-*Philosophy:* Maximum automation, but with strictly controlled Context Cost and rigid verification closed-loops.
+*Philosophy:* Maximum automation, but with strictly controlled Context Cost and rigid, dual-layer verification closed-loops.
+

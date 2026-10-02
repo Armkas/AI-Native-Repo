@@ -1,6 +1,6 @@
 # [Project Name] — AGENTS.md
 
-> Runtime-neutral entry point for every AI coding agent. Keep this file a **router** (< 2 KB): it points to context, it does not hold it.
+> Runtime-neutral entry point for every AI coding agent. Keep this file a **router** (<= 2048 bytes): it points to context, it does not hold it.
 
 ## Verify before you claim "done"
 

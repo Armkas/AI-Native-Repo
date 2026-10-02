@@ -4,8 +4,16 @@
 
 ## Repository Design Specification for AI Coding Agents
 
-> For the reasoning behind these rules, see [Philosophy](philosophy.md)
+> For the theoretical background and reasoning behind these rules, see [Philosophy](philosophy.md)
 > ([简体中文](philosophy.zh-CN.md) · [日本語](philosophy.ja.md)).
+
+---
+
+## Conformance Notation (RFC 2119)
+The key words **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECOMMENDED**, and **MAY** in this specification are to be interpreted as described in [RFC 2119](https://www.ietf.org/rfc/rfc2119.txt).
+- **Normative Rules**: Hard requirements verified by validators and tests.
+- **Recommended Heuristics**: Practical engineering guidance based on cognitive budget.
+- **Informative Rationale**: Background context and design motivations (detailed in Philosophy).
 
 ---
 
@@ -26,69 +34,71 @@ We define the **8-Pillar AI-Native Architecture** that sits alongside your tradi
 
 ---
 
-# I. Context Must Be Earned
+# I. Context Management
 
-## Rule 01 — Context must be loaded on-demand
-Do not bloat the agent's context window by injecting all domains, rules, and skills for every task. The global router (`AGENTS.md`) should remain small (< 2KB). Specific context (e.g., a Database Schema or a Feature Development Skill) must only be loaded when the specific task requires it.
+## Rule 01 (Normative) — Minimal Global Router Budget
+The global router (`AGENTS.md`) **MUST** serve strictly as a pointer and directory router, and **MUST NOT** embed deep domain implementations, full schemas, or large documentation dumps.
+- To prevent instruction bloat and preserve attention, the router **MUST** adhere to an ANR design budget of **<= 2048 bytes (2 KiB)**.
+- Task-specific context **MUST** be loaded on-demand rather than injected into always-on prompt state.
 
-## Rule 02 — Progressive Disclosure
-Progressive Disclosure is a context-routing policy, not a fixed reading order. The agent should dynamically route to the necessary context:
+## Rule 02 (Heuristic) — Progressive Disclosure
+Context routing **SHOULD** follow a progressive disclosure pattern rather than a monolithic dump:
 `Task` → `Project Map` → `Domain / Contract` → `Implementation / Test`
 
 ---
 
-# II. Standardize Concepts, Isolate Runtimes
+# II. Standardize Semantics, Isolate Runtimes
 
-## Rule 03 — Semantic-Agnostic, Runtime-Aware, Model-Tunable
-The AI industry requires separating three distinct layers:
-1. **The Model / Model Provider** (e.g., OpenAI, Anthropic, Google, DeepSeek, Qwen, Meta, Moonshot, Zhipu, MiniMax): The underlying reasoning engine's provider or family. Never hard-code a specific model version here — providers and families change far less often than model names.
-2. **The Agent Runtime** (e.g., Claude Code, Codex, Gemini CLI, Cursor, Qwen Code, DeepSeek Harness): *How* files are read, *when* skills are invoked, and *what* hooks execute.
-3. **The Repository Standard** (The semantics): *What* your project is.
+## Rule 03 (Normative) — Separation of Concerns: Model Provider × Agent Runtime × Repository Standard
+ANR formalizes the separation of three distinct operational layers:
+1. **The Model / Model Provider** (e.g., OpenAI, Anthropic, Google, DeepSeek, Qwen, Meta, Moonshot, Zhipu, MiniMax): The underlying reasoning engine. Models **MUST NOT** be hard-coded into repository paths or template variants.
+2. **The Agent Runtime** (e.g., Claude Code, Codex, Gemini CLI, Cursor): *How* files are read, *when* skills are invoked, and *what* hooks execute.
+3. **The Repository Standard** (Canonical Semantic Intent): *What* your project is intended to be.
 
-Your repository's semantics (Domains, Contracts, Workflows) must be **Model-Agnostic**. However, because different agent runtimes expect configurations in different directories (`.claude/`, `.cursor/rules/`, `.agents/skills/`), your repository's setup must be **Runtime-Aware**. Optionally, a small, isolated layer of prompt/skill wording may be **Model-Tunable** — adjusted for a specific model's context window or instruction style — but this must never leak into the Repository Standard's core semantics.
+**Model Provider ≠ Agent Runtime — they MUST NOT be collapsed into one axis.**
+A Runtime is not owned by a single Model Provider (Cursor and Claude Code can both be driven by Anthropic, OpenAI, or API-compatible providers such as DeepSeek). Providers are tracked in the [Model Compatibility Matrix](model-compatibility.md), never as distinct template directories.
 
-**Model Provider ≠ Agent Runtime — do not collapse them into one axis.** A Runtime is not owned by a single Model Provider (Cursor and Claude Code can both be driven by Anthropic, OpenAI, or API-compatible providers such as DeepSeek), and a single provider's models can show up inside multiple runtimes (Qwen Code natively runs Qwen but also supports DeepSeek, OpenAI, and Anthropic as configured providers). Because of this, **Model Provider must never become a Template dimension** (there is no `templates/deepseek/` or `templates/qwen/`); it is tracked separately in the [Model Compatibility Matrix](model-compatibility.md).
+## Rule 04 (Normative) — Single Source of Canonical Intent
+Canonical semantic intent **MUST** live in `docs/` and `.agents/`. Runtime-specific adapter files (`CLAUDE.md`, `.cursor/rules/core.mdc`, `GEMINI.md`) **MUST** serve as entrypoint wrappers that route the agent into the canonical intent layer, avoiding duplicated business logic across multiple runtime files.
 
-**Establish Explicit Runtime Ownership.**
-While a production project can use multiple agent runtimes concurrently (e.g. Cursor for devs + Claude Code for CI scripts), you must explicitly divide ownership. The business logic (`docs/domains`) remains universal, but you must never duplicate identical business rules across `.cursor/rules/` and `.claude/skills`. Each runtime adapter must cleanly route to the single source of semantic truth.
-
-The same applies to skills and guardrails: canonical skills live once in `.agents/skills/<name>/SKILL.md`. Runtimes that discover `.agents/skills/` natively (Codex, Cursor, Gemini CLI) need nothing more; a runtime that only reads its own directory (Claude Code's `.claude/skills`) receives a **symlink**, not a copy. Guardrail logic lives in runtime-neutral scripts; adapters only wire the trigger (a native pre-edit hook, plus a CI step that shell edits cannot bypass). See [Runtime Adapters](adapters.md).
+## Rule 05 (Normative) — Canonical Skills (Agent Skills Open Standard)
+All reusable agent skills **MUST** reside canonically in `.agents/skills/<name>/SKILL.md` conforming to the Agent Skills Open Standard:
+- Directory name **MUST** match the `name` field in `SKILL.md` frontmatter (lowercase, alphanumeric, and hyphens, <= 64 characters).
+- Frontmatter **MUST** contain a non-empty `description` (<= 1024 characters) explaining when and why the skill should be invoked.
+- Runtimes with native `.agents/skills` support discover them directly. Runtimes requiring local directories (Claude Code) receive a symlink (`.claude/skills`), never an unmanaged second copy.
 
 ---
 
 # III. The Human-Agent Boundary
 
-## Rule 04 — Clone ≠ Trust
-Agent scripts, Hooks (e.g., `PreToolUse`), and MCP server configurations can be version-controlled in Git to ensure reproducibility. However, **cloning a repository does not equal trust.** Any automated hook or tool that can execute code or modify the environment must require explicit human authorization before being enabled.
+## Rule 06 (Normative) — Clone ≠ Trust
+Agent scripts, hooks, and tool configurations can be version-controlled in Git for reproducibility. However, **cloning a repository does not imply trust.** Any automated hook or tool that executes local code **MUST** require explicit human authorization before being enabled.
 
-## Rule 05 — Explicit Permission Boundaries (`MANUAL_TASKS.md`)
-Every AI-Native repository must define what the AI is allowed to do autonomously versus what requires human intervention.
-- **[Autonomous]**: e.g., Write code, run tests, format files.
-- **[Approval Required]**: e.g., Production database migrations, pushing to the main branch.
-- **[Manual Only]**: e.g., Injecting production secrets, updating DNS records, physical device testing.
+## Rule 07 (Normative) — Explicit Permission Boundaries (`MANUAL_TASKS.md`)
+Every AI-Native repository **MUST** define explicit permission boundaries in `MANUAL_TASKS.md`:
+- **[Autonomous]**: Actions the agent can perform without asking (e.g., editing application source, running test suites, formatting).
+- **[Approval Required]**: Sensitive operations requiring confirmation (e.g., database schema migrations, modifying dependencies).
+- **[Manual Only]**: Actions exclusively reserved for humans (e.g., injecting production secrets, modifying production DNS, hardware testing).
 
 ---
 
 # IV. Cognitive Structure
 
-## Rule 06 — The Project Map
-A concise `< 100 lines` map (e.g., `docs/PROJECT_MAP.md`) must exist to quickly build global awareness of where major components live.
+## Rule 08 (Heuristic) — The Project Map
+A concise map (e.g., `docs/PROJECT_MAP.md`) **SHOULD** exist to quickly establish global navigation awareness. It **SHOULD** target approximately <= 100 lines.
 
-## Rule 07 — Interfaces Before Implementations
-Business capabilities must prioritize Interface definitions (Protocols, abstract classes). Interfaces must document responsibilities, inputs, outputs, errors, and side effects.
+## Rule 09 (Normative) — Interfaces Before Implementations
+Public and inter-domain boundaries **MUST** prioritize explicit Interface definitions (protocols, abstract types, schemas) before concrete implementations. Interfaces document contracts, inputs, outputs, errors, and side effects.
 
-## Rule 08 — Invariants
-Business rules that must never be broken (e.g., "Network failure → fallback" or "High-risk action → explicit confirmation") must be explicitly documented (e.g., `docs/invariants/`), not just hidden in code.
-
----
-
-# V. Verification
-
-## Rule 09 — Closed-Loop Verification
-An AI agent's job is not complete when the code is written. The repository must provide deterministic validators (e.g., `scripts/validate.sh`, linters, type checkers, test suites). The agent must run these tools and confirm a `0` exit code before concluding a task.
+## Rule 10 (Normative) — Documented Invariants
+Inviolable business invariants (e.g., "Payments must be idempotent", "Protected paths are immutable") **MUST** be explicitly documented in `docs/invariants/` and referenced by automated tests.
 
 ---
 
-# VI. Explicit structure, not excessive abstraction
+# V. Verification & Quality
 
-AI-Native ≠ Abstraction-Heavy. Keep architectural boundaries explicit, files small (< 500 lines preferred), and symbol names meaningful. The goal is smaller cognitive boundaries for the AI.
+## Rule 11 (Normative) — Closed-Loop Deterministic Verification
+An AI agent's work is not complete upon code generation. The repository **MUST** provide deterministic verification commands (e.g., linters, type checks, test runners, freshness scripts). The agent **MUST** execute these verifications and confirm a zero exit code (`0`) before concluding a task.
+
+## Rule 12 (Heuristic) — Explicit Structure Over Excessive Abstraction
+AI-Native architecture favors explicit, clear boundaries over deep layers of unnecessary indirection, proxies, or facades. Keep source files focused (preferably < 500 lines) to minimize cognitive load.

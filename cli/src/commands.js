@@ -1,24 +1,16 @@
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
+const { parseYAML, stringifyYAML, validateManifest } = require('./yaml.js');
 
-const RUNTIMES = ['claude-code', 'codex', 'gemini-cli', 'cursor'];
-const TIERS = ['light', 'standard', 'full'];
-const LANGS = ['en', 'zh-CN', 'ja'];
-// Runtimes that only read skills from their own directory get a link to the canonical .agents/skills/.
-// Codex, Cursor and Gemini CLI discover .agents/skills/ natively; Claude Code reads only .claude/skills/.
-const SKILL_LINKS = { 'claude-code': '.claude/skills' };
-const RUNTIME_ENTRIES = {
-  'claude-code': 'CLAUDE.md',
-  'codex': 'AGENTS.md',
-  'gemini-cli': 'GEMINI.md',
-  'cursor': '.cursor/rules/core.mdc'
-};
-const VARIANT_RE = /^(.+)\.(zh-CN|ja)(\.[^.]+)$/;
+// Load canonical catalog as Single Source of Truth
+const catalog = require('./runtime-catalog.json');
+const RUNTIMES = Object.keys(catalog.runtimes);
+const TIERS = catalog.tiers;
+const LANGS = catalog.languages;
 const CLI_VERSION = require('../package.json').version;
+const VARIANT_RE = /^(.+)\.(zh-CN|ja)(\.[^.]+)$/;
 
-
-// A simple CLI prompt helper
 function prompt(question) {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   return new Promise(resolve => {
@@ -31,105 +23,176 @@ function prompt(question) {
 
 function versionCommand() {
   console.log(`AI-Native Repository CLI version ${CLI_VERSION}`);
-  console.log(`Standard Version: 2.0`);
+  console.log(`Standard Version: 2.0 (ANR 2.0 Final Specification)`);
 }
 
 function listCommand() {
   console.log("Available Agent Runtimes:");
-  RUNTIMES.forEach((r, i) => console.log(`  ${i + 1}. ${r}`));
+  RUNTIMES.forEach((r, i) => {
+    const meta = catalog.runtimes[r];
+    console.log(`  ${i + 1}. ${r.padEnd(12)} - ${meta.name} (Entry: ${meta.entrypoint})`);
+  });
   console.log("\nAvailable Tiers (Complexity Profiles):");
   TIERS.forEach((t, i) => console.log(`  ${i + 1}. ${t}`));
+  console.log("\nSupported Languages:");
+  LANGS.forEach((l, i) => console.log(`  ${i + 1}. ${l}`));
 }
 
 function doctorCommand() {
   const cwd = process.cwd();
   console.log("Running AI-Native Repository Doctor on:", cwd);
-  const hasMap = fs.existsSync(path.join(cwd, 'docs', 'PROJECT_MAP.md'));
-  const hasManifest = fs.existsSync(path.join(cwd, 'anr.yaml'));
-  const hasClaude = fs.existsSync(path.join(cwd, 'CLAUDE.md'));
-  const hasCursor = fs.existsSync(path.join(cwd, '.cursor', 'rules'));
-  const hasGemini = fs.existsSync(path.join(cwd, 'GEMINI.md'));
-  const hasCodex = fs.existsSync(path.join(cwd, 'AGENTS.md'));
+  console.log("──────────────────────────────────────────────────");
 
-  if (!hasMap && !hasManifest && !hasClaude && !hasCursor && !hasGemini && !hasCodex) {
-    console.log("❌ No AI-Native Repository infrastructure detected.");
-    console.log("   Suggestion: run `anr init .` to get started.");
+  const manifestPath = path.join(cwd, 'anr.yaml');
+  if (!fs.existsSync(manifestPath)) {
+    console.log("❌ No anr.yaml manifest found in current directory.");
+    console.log("   Suggestion: run `anr init .` to scaffold an AI-Native repository.");
+    return;
+  }
+
+
+  let manifestInfo;
+  try {
+    const raw = fs.readFileSync(manifestPath, 'utf8');
+    const parsed = parseYAML(raw);
+    manifestInfo = validateManifest(parsed, catalog);
+    console.log(`✅ Manifest valid: ${parsed.repository.kind} (Schema: ${parsed.schema_version})`);
+  } catch (err) {
+    console.log(`❌ Invalid anr.yaml manifest: ${err.message}`);
+    process.exit(1);
+  }
+
+  if (manifestInfo.kind === 'reference') {
+    console.log("ℹ️  Repository Kind: Reference Repository");
+    console.log("   - Canonical spec   :", fs.existsSync(path.join(cwd, 'spec')) ? "✓ spec/ exists" : "✗ missing");
+    console.log("   - Template source  :", fs.existsSync(path.join(cwd, 'template-source')) ? "✓ template-source/ exists" : "✗ missing");
+    console.log("   - CLI source       :", fs.existsSync(path.join(cwd, 'cli')) ? "✓ cli/ exists" : "✗ missing");
+    console.log("Doctor check passed for Reference Repository.");
+    return;
+  }
+
+  // Consumer Diagnostics
+  console.log(`ℹ️  Runtime: ${manifestInfo.runtime} | Tier: ${manifestInfo.tier} | Lang: ${manifestInfo.language}`);
+  console.log(`ℹ️  Template Version: ${manifestInfo.version} (Sync Status: ${manifestInfo.syncStatus})`);
+
+  // Context Layer Checks
+  const hasMap = fs.existsSync(path.join(cwd, 'docs', 'PROJECT_MAP.md'));
+  const hasDomains = fs.existsSync(path.join(cwd, 'docs', 'domains'));
+  const hasContracts = fs.existsSync(path.join(cwd, 'docs', 'contracts'));
+  console.log("Context Architecture:");
+  console.log(`  ${hasMap ? '✓' : '✗'} docs/PROJECT_MAP.md`);
+  console.log(`  ${hasDomains ? '✓' : '✗'} docs/domains/`);
+  console.log(`  ${hasContracts ? '✓' : '✗'} docs/contracts/`);
+
+  // Router Check
+  const agentsPath = path.join(cwd, 'AGENTS.md');
+  if (fs.existsSync(agentsPath)) {
+    const size = fs.statSync(agentsPath).size;
+    if (size <= 2048) {
+      console.log(`  ✓ AGENTS.md router within <= 2048-byte budget (${size} bytes)`);
+    } else {
+      console.log(`  ✗ AGENTS.md router exceeds 2048-byte budget (${size} bytes)`);
+    }
   } else {
-    console.log("✅ Basic AI-Native structures detected.");
-    if (hasManifest) console.log("   - Found anr.yaml manifest");
-    if (hasMap) console.log("   - Found docs/PROJECT_MAP.md");
-    if (hasClaude || hasCursor || hasGemini || hasCodex) {
-      console.log("   - Found Agent Runtime entrypoints");
+    console.log("  ✗ AGENTS.md missing");
+  }
+
+  // Skills Check against Agent Skills Open Standard
+  const skillsDir = path.join(cwd, '.agents', 'skills');
+  if (fs.existsSync(skillsDir)) {
+    const skills = fs.readdirSync(skillsDir, { withFileTypes: true }).filter(d => d.isDirectory());
+    console.log(`Skills (${skills.length} detected):`);
+    for (const s of skills) {
+      const skillFile = path.join(skillsDir, s.name, 'SKILL.md');
+      if (!fs.existsSync(skillFile)) {
+        console.log(`  ✗ ${s.name}: missing SKILL.md`);
+        continue;
+      }
+      const content = fs.readFileSync(skillFile, 'utf8');
+      const nameMatch = content.match(/^name:\s*(.+)$/m);
+      const descMatch = content.match(/^description:\s*(.+)$/m);
+      const name = nameMatch ? nameMatch[1].trim() : '';
+      const desc = descMatch ? descMatch[1].trim() : '';
+      const validName = /^[a-z0-9-]+$/.test(name) && name.length <= 64 && name === s.name;
+      const validDesc = desc.length > 0 && desc.length <= 1024;
+      if (validName && validDesc) {
+        console.log(`  ✓ ${s.name} (valid Agent Skills standard)`);
+      } else {
+        console.log(`  ✗ ${s.name}: non-compliant frontmatter (name: '${name}', desc length: ${desc.length})`);
+      }
     }
   }
+
+  // Symlinks & Mirrors Check
+  const skillLinkRel = catalog.runtimes[manifestInfo.runtime].skill_link;
+  if (skillLinkRel) {
+    const linkPath = path.join(cwd, skillLinkRel);
+    if (isSymlink(linkPath)) {
+      console.log(`  ✓ ${skillLinkRel} symlink healthy`);
+    } else if (fs.existsSync(linkPath)) {
+      console.log(`  ⚠ ${skillLinkRel} is a copied compatibility mirror (run 'anr update' to sync)`);
+    } else {
+      console.log(`  ✗ ${skillLinkRel} missing`);
+    }
+  }
+
+  console.log("──────────────────────────────────────────────────");
+  console.log("✅ Doctor inspection complete.");
 }
 
 function validateCommand(args) {
   const isCI = args.includes('--ci');
   const cwd = process.cwd();
   
-  // 1. Check if this is the Reference Repository via explicit machine-readable manifest (anr.yaml)
   const manifestPath = path.join(cwd, 'anr.yaml');
-  let isReferenceRepo = false;
-  if (fs.existsSync(manifestPath)) {
-    try {
-      const manifestText = fs.readFileSync(manifestPath, 'utf8');
-      if (/kind:\s*["']?reference-repository["']?/.test(manifestText)) {
-        isReferenceRepo = true;
-      }
-    } catch {}
-  }
-
-  const canonicalScript = path.join(cwd, 'scripts', 'validate.sh');
-  if (isReferenceRepo && fs.existsSync(canonicalScript)) {
-    if (!isCI) console.log("Running canonical reference validator (scripts/validate.sh)...");
-    try {
-      const { execSync } = require('child_process');
-      execSync(`bash "${canonicalScript}"`, { stdio: 'inherit' });
-      if (!isCI) console.log("\n🎉 VALIDATION PASSED!");
-      process.exit(0);
-    } catch (err) {
-      if (!isCI) console.log(`\n❌ VALIDATION FAILED.`);
-      process.exit(1);
-    }
-  }
-
-  // 2. Otherwise (Consumer Repository), perform comprehensive AI-Native validation
-  let fails = 0;
   if (!fs.existsSync(manifestPath)) {
     console.error("❌ FAIL: anr.yaml missing. Run `anr init .` to scaffold.");
-    fails++;
-  } else {
-    if (!isCI) console.log("✅ PASS: anr.yaml exists.");
-    try {
-      const manifestText = fs.readFileSync(manifestPath, 'utf8');
-      if (!/schema_version:\s*["']?2\.0["']?/.test(manifestText)) {
-        console.error("❌ FAIL: anr.yaml missing schema_version: 2.0.");
-        fails++;
+    process.exit(1);
+  }
+
+  let manifestObj;
+  let validationResult;
+  try {
+    const raw = fs.readFileSync(manifestPath, 'utf8');
+    manifestObj = parseYAML(raw);
+    validationResult = validateManifest(manifestObj, catalog);
+  } catch (err) {
+    console.error(`❌ FAIL: Invalid anr.yaml manifest: ${err.message}`);
+    process.exit(1);
+  }
+
+  // 1. Reference Repository
+  if (validationResult.kind === 'reference') {
+    const canonicalScript = path.join(cwd, 'scripts', 'validate.sh');
+    if (fs.existsSync(canonicalScript)) {
+      if (!isCI) console.log("Running canonical reference validator (scripts/validate.sh)...");
+      try {
+        const { execSync } = require('child_process');
+        execSync(`bash "${canonicalScript}"`, { stdio: 'inherit' });
+        process.exit(0);
+      } catch (err) {
+        process.exit(1);
       }
-      if (!/runtime:\s*\n\s*name:/.test(manifestText) && !/runtime:/.test(manifestText)) {
-        console.error("❌ FAIL: anr.yaml missing runtime declaration.");
-        fails++;
-      }
-    } catch (e) {
-      console.error("❌ FAIL: anr.yaml could not be read.");
-      fails++;
     }
   }
 
-  // Validate canonical router (AGENTS.md budget <= 2KB / 2048 bytes per Rule 01)
+  // 2. Consumer Repository
+  let fails = 0;
+  if (!isCI) console.log("✅ PASS: anr.yaml schema is valid (ANR 2.0).");
+
+  // Validate canonical router (AGENTS.md budget <= 2048 bytes per Rule 01)
   const agentsPath = path.join(cwd, 'AGENTS.md');
   if (fs.existsSync(agentsPath)) {
     const size = fs.statSync(agentsPath).size;
     if (size > 2048) {
-      console.error(`❌ FAIL: AGENTS.md is ${size} bytes (> 2048 bytes / 2 KB budget).`);
+      console.error(`❌ FAIL: AGENTS.md is ${size} bytes (> 2048 bytes budget per Rule 01).`);
       fails++;
     } else {
-      if (!isCI) console.log(`✅ PASS: AGENTS.md router is within 2 KB budget (${size} bytes).`);
+      if (!isCI) console.log(`✅ PASS: AGENTS.md router satisfies <= 2048 bytes budget (${size} bytes).`);
     }
   }
 
-  // Validate skills directory and frontmatter if present
+  // Validate skills against Agent Skills open standard
   const skillsDir = path.join(cwd, '.agents', 'skills');
   if (fs.existsSync(skillsDir)) {
     try {
@@ -141,8 +204,14 @@ function validateCommand(args) {
           fails++;
         } else {
           const content = fs.readFileSync(skillFile, 'utf8');
-          if (!/^---\n[\s\S]*?name:\s*.+[\s\S]*?description:\s*.+[\s\S]*?---/.test(content)) {
-            console.error(`❌ FAIL: Skill '${s.name}/SKILL.md' missing valid name/description frontmatter.`);
+          const nameMatch = content.match(/^name:\s*(.+)$/m);
+          const descMatch = content.match(/^description:\s*(.+)$/m);
+          const name = nameMatch ? nameMatch[1].trim() : '';
+          const desc = descMatch ? descMatch[1].trim() : '';
+          const validName = /^[a-z0-9-]+$/.test(name) && name.length <= 64 && name === s.name;
+          const validDesc = desc.length > 0 && desc.length <= 1024;
+          if (!validName || !validDesc) {
+            console.error(`❌ FAIL: Skill '${s.name}' violates Agent Skills standard (name='${name}', desc length=${desc.length}).`);
             fails++;
           }
         }
@@ -153,7 +222,7 @@ function validateCommand(args) {
   const freshness = path.join(cwd, 'scripts', 'check-freshness.sh');
   if (fs.existsSync(freshness)) {
     try {
-      require('child_process').execSync(`bash "${freshness}"`, { stdio: isCI ? 'pipe' : 'inherit' });
+      require('child_process').execSync(`bash "${freshness}" --strict`, { stdio: isCI ? 'pipe' : 'inherit' });
     } catch (err) {
       if (isCI && err.stdout) process.stdout.write(err.stdout);
       fails++;
@@ -198,9 +267,7 @@ async function initCommand(args) {
     RUNTIMES.forEach((r, i) => console.log(`  ${i + 1}. ${r}`));
     let ans = await prompt("Select Runtime (1-4): ");
     runtime = RUNTIMES[parseInt(ans) - 1];
-    if (!runtime) {
-      console.log("❌ Invalid choice. Please select a number between 1 and 4.\n");
-    }
+    if (!runtime) console.log("❌ Invalid choice. Please select a number between 1 and 4.\n");
   }
 
   while (!tier || !TIERS.includes(tier)) {
@@ -208,9 +275,7 @@ async function initCommand(args) {
     TIERS.forEach((r, i) => console.log(`  ${i + 1}. ${r}`));
     let ans = await prompt("Select Tier (1-3): ");
     tier = TIERS[parseInt(ans) - 1];
-    if (!tier) {
-      console.log("❌ Invalid choice. Please select a number between 1 and 3.\n");
-    }
+    if (!tier) console.log("❌ Invalid choice. Please select a number between 1 and 3.\n");
   }
 
   console.log(`\nInitializing AI-Native Repository...`);
@@ -221,18 +286,17 @@ async function initCommand(args) {
   if (isDryRun) console.log(`[DRY RUN] No files will be written.\n`);
 
   const templateDir = path.join(__dirname, '..', 'templates', runtime, tier);
-  
   if (!fs.existsSync(templateDir)) {
-    console.error(`❌ Error: Template not found at ${templateDir}. This CLI distribution might be incomplete.`);
+    console.error(`❌ Error: Template not found at ${templateDir}.`);
     process.exit(1);
   }
 
-  // Preflight: Collect all file actions to prevent partial writes if conflicts exist
+  // Preflight: Collect all file actions to prevent partial writes
   const actions = collectFileActions(templateDir, targetDir, lang, isForce);
 
-  // Check manifest
+  // Manifest action
   const manifestPath = path.join(targetDir, 'anr.yaml');
-  const manifestContent = generateManifest(runtime, tier, lang);
+  const manifestContent = generateConsumerManifest(runtime, tier, lang);
   if (fs.existsSync(manifestPath)) {
     const existing = fs.readFileSync(manifestPath, 'utf8');
     if (existing === manifestContent) {
@@ -254,7 +318,7 @@ async function initCommand(args) {
     });
   }
 
-  // Detect conflicts
+  // Abort on conflicts
   const conflicts = actions.filter(a => a.type === 'CONFLICT');
   if (conflicts.length > 0) {
     console.error(`\n❌ Initialization aborted: ${conflicts.length} conflicting files already exist with different content:`);
@@ -266,23 +330,13 @@ async function initCommand(args) {
     process.exit(2);
   }
 
-  // Execution Phase: Write files cleanly
+  // Execution Phase
   for (const act of actions) {
     if (act.type === 'SKIP') {
       console.log(`  Skip     : ${act.relPath} (${act.reason || 'identical'})`);
-    } else if (act.type === 'OVERWRITE') {
-      console.log(`  Overwrite: ${act.relPath}`);
-      if (!isDryRun) {
-        fs.mkdirSync(path.dirname(act.destPath), { recursive: true });
-        if (act.srcContent !== undefined) {
-          fs.writeFileSync(act.destPath, act.srcContent);
-        } else {
-          fs.copyFileSync(act.srcPath, act.destPath);
-          fs.chmodSync(act.destPath, fs.statSync(act.srcPath).mode);
-        }
-      }
-    } else if (act.type === 'CREATE') {
-      console.log(`  Create   : ${act.relPath}`);
+    } else if (act.type === 'OVERWRITE' || act.type === 'CREATE') {
+      const verb = act.type === 'OVERWRITE' ? 'Overwrite' : 'Create   ';
+      console.log(`  ${verb}: ${act.relPath}`);
       if (!isDryRun) {
         fs.mkdirSync(path.dirname(act.destPath), { recursive: true });
         if (act.srcContent !== undefined) {
@@ -302,27 +356,32 @@ async function initCommand(args) {
   }
 }
 
-function generateManifest(runtime, tier, lang) {
-  const runtimeEntry = RUNTIME_ENTRIES[runtime] || 'AGENTS.md';
-  return [
-    `schema_version: "2.0"`,
-    `repository:`,
-    `  kind: "consumer-repository"`,
-    `  standard: "AI-Native Repository Standard"`,
-    `runtime:`,
-    `  name: "${runtime}"`,
-    `tier: "${tier}"`,
-    `language: "${lang}"`,
-    `entrypoints:`,
-    `  canonical_intent: "docs/"`,
-    `  semantic_router: "AGENTS.md"`,
-    `  runtime_entrypoint: "${runtimeEntry}"`,
-    `  skills: ".agents/skills/"`,
-    `template:`,
-    `  version: "${CLI_VERSION}"`
-  ].join('\n') + '\n';
+function generateConsumerManifest(runtime, tier, lang) {
+  const runtimeEntry = catalog.runtimes[runtime].entrypoint || 'AGENTS.md';
+  const manifestObj = {
+    schema_version: '2.0',
+    repository: {
+      kind: 'consumer-repository',
+      standard: 'AI-Native Repository Standard'
+    },
+    runtime: {
+      name: runtime,
+      tier: tier,
+      language: lang
+    },
+    entrypoints: {
+      canonical_intent: 'docs/',
+      semantic_router: 'AGENTS.md',
+      runtime_entrypoint: runtimeEntry,
+      skills: '.agents/skills/'
+    },
+    template: {
+      version: CLI_VERSION,
+      sync_status: 'synced'
+    }
+  };
+  return stringifyYAML(manifestObj);
 }
-
 
 function planLanguageFiles(srcDir, lang) {
   const out = new Map();
@@ -380,7 +439,7 @@ function isSymlink(p) {
 }
 
 function linkSkills(targetDir, runtime, templateDir, isDryRun, isForce) {
-  const linkRel = SKILL_LINKS[runtime];
+  const linkRel = catalog.runtimes[runtime].skill_link;
   if (!linkRel || !fs.existsSync(path.join(templateDir, '.agents', 'skills'))) return;
   const linkPath = path.join(targetDir, linkRel);
   const canonical = path.join(targetDir, '.agents', 'skills');
@@ -431,14 +490,75 @@ function linkSkills(targetDir, runtime, templateDir, isDryRun, isForce) {
   }
 }
 
+// Deep merges JSON runtime configurations (Claude settings, Cursor hooks, etc.)
+function mergeJsonConfigs(existingPath, templatePath) {
+  try {
+    const existing = JSON.parse(fs.readFileSync(existingPath, 'utf8'));
+    const template = JSON.parse(fs.readFileSync(templatePath, 'utf8'));
+    const merged = { ...existing };
+
+    if (template.permissions && typeof template.permissions === 'object') {
+      merged.permissions = merged.permissions || {};
+      for (const [k, v] of Object.entries(template.permissions)) {
+        if (Array.isArray(v)) {
+          const userArr = Array.isArray(merged.permissions[k]) ? merged.permissions[k] : [];
+          merged.permissions[k] = Array.from(new Set([...userArr, ...v]));
+        } else {
+          merged.permissions[k] = merged.permissions[k] || v;
+        }
+      }
+    }
+
+    if (template.hooks) {
+      if (Array.isArray(template.hooks)) {
+        merged.hooks = Array.isArray(merged.hooks) ? merged.hooks : [];
+        for (const th of template.hooks) {
+          const exists = merged.hooks.some(h => JSON.stringify(h) === JSON.stringify(th));
+          if (!exists) merged.hooks.push(th);
+        }
+      } else if (typeof template.hooks === 'object') {
+        merged.hooks = merged.hooks || {};
+        for (const [k, v] of Object.entries(template.hooks)) {
+          if (!merged.hooks[k]) {
+            merged.hooks[k] = v;
+          } else if (Array.isArray(v) && Array.isArray(merged.hooks[k])) {
+            merged.hooks[k] = Array.from(new Set([...merged.hooks[k], ...v]));
+          }
+        }
+      }
+    }
+
+    return JSON.stringify(merged, null, 2) + '\n';
+  } catch (err) {
+    return fs.readFileSync(templatePath, 'utf8');
+  }
+}
+
+function classifyOwnership(relPath) {
+  if (relPath === '.claude/settings.json' ||
+      relPath === '.cursor/hooks.json' ||
+      relPath === '.codex/hooks.json' ||
+      relPath === '.gemini/settings.json') {
+    return 'merge-json';
+  }
+  if (relPath.startsWith('.agents/skills/') ||
+      relPath.startsWith('scripts/guard-paths.sh') ||
+      relPath.startsWith('scripts/check-freshness.sh')) {
+    return 'managed';
+  }
+  return 'user-domain';
+}
+
 async function updateCommand(args) {
   let target = '.';
   let isDryRun = false;
   let isForce = false;
+  let isPrune = false;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--dry-run') isDryRun = true;
     else if (args[i] === '--force') isForce = true;
+    else if (args[i] === '--prune') isPrune = true;
     else if (!args[i].startsWith('-')) target = args[i];
   }
 
@@ -451,46 +571,34 @@ async function updateCommand(args) {
     process.exit(1);
   }
 
-  const manifestText = fs.readFileSync(manifestPath, 'utf8');
-  const runtimeMatch = manifestText.match(/runtime:\s*\n\s*name:\s*["']?([^"'\n]+)/) || manifestText.match(/name:\s*["']?([^"'\n]+)/);
-  const tierMatch = manifestText.match(/tier:\s*["']?([^"'\n]+)/);
-  const langMatch = manifestText.match(/language:\s*["']?([^"'\n]+)/);
-  const versionMatch = manifestText.match(/version:\s*["']?([^"'\n]+)/);
-
-  const runtime = runtimeMatch ? runtimeMatch[1].trim() : 'claude-code';
-  const tier = tierMatch ? tierMatch[1].trim() : 'standard';
-  const lang = langMatch ? langMatch[1].trim() : 'en';
-  const currentVersion = versionMatch ? versionMatch[1].trim() : 'unknown';
-
-  const templateDir = path.join(__dirname, '..', 'templates', runtime, tier);
-  if (!fs.existsSync(templateDir)) {
-    console.error(`❌ Error: Template for runtime '${runtime}' and tier '${tier}' not found at ${templateDir}.`);
+  let manifestObj;
+  let info;
+  try {
+    const raw = fs.readFileSync(manifestPath, 'utf8');
+    manifestObj = parseYAML(raw);
+    info = validateManifest(manifestObj, catalog);
+  } catch (err) {
+    console.error(`❌ Error: Manifest validation failed: ${err.message}`);
+    console.error(`   Refusing to perform update on corrupted manifest.`);
     process.exit(1);
   }
 
-  console.log(`\nUpdating AI-Native Repository...`);
-  console.log(`Target   : ${targetDir}`);
-  console.log(`Runtime  : ${runtime}`);
-  console.log(`Tier     : ${tier}`);
-  console.log(`Language : ${lang}`);
-  console.log(`Version  : ${currentVersion} -> ${CLI_VERSION}`);
-  if (isDryRun) console.log(`[DRY RUN] No files will be written.\n`);
-
-  function isInfrastructure(relPath) {
-    if (relPath.startsWith('.agents/skills/') ||
-        relPath.startsWith('.claude/') ||
-        relPath.startsWith('.cursor/hooks') ||
-        relPath.startsWith('.codex/hooks') ||
-        relPath.startsWith('.gemini/settings') ||
-        relPath.startsWith('scripts/')) {
-      return true;
-    }
-    return false;
+  const templateDir = path.join(__dirname, '..', 'templates', info.runtime, info.tier);
+  if (!fs.existsSync(templateDir)) {
+    console.error(`❌ Error: Template not found at ${templateDir}.`);
+    process.exit(1);
   }
 
-  const actions = collectFileActions(templateDir, targetDir, lang, isForce);
+  console.log(`\nAI-Native Repository Three-Way Update Engine`);
+  console.log(`Target   : ${targetDir}`);
+  console.log(`Runtime  : ${info.runtime} | Tier: ${info.tier} | Lang: ${info.language}`);
+  console.log(`Version  : ${info.version} -> ${CLI_VERSION}`);
+  if (isDryRun) console.log(`[DRY RUN] Transaction preview only — zero files written.\n`);
+
+  const actions = collectFileActions(templateDir, targetDir, info.language, isForce);
   let added = 0;
   let updated = 0;
+  let merged = 0;
   let skipped = 0;
   let review = 0;
 
@@ -499,6 +607,9 @@ async function updateCommand(args) {
       skipped++;
       continue;
     }
+
+    const ownership = classifyOwnership(act.relPath);
+
     if (act.type === 'CREATE') {
       console.log(`  + Add    : ${act.relPath}`);
       if (!isDryRun) {
@@ -508,7 +619,14 @@ async function updateCommand(args) {
       }
       added++;
     } else if (act.type === 'OVERWRITE' || act.type === 'CONFLICT') {
-      if (isInfrastructure(act.relPath) || isForce) {
+      if (ownership === 'merge-json') {
+        console.log(`  ~ Merge  : ${act.relPath} (preserving user custom rules & keys)`);
+        if (!isDryRun) {
+          const mergedContent = mergeJsonConfigs(act.destPath, act.srcPath);
+          fs.writeFileSync(act.destPath, mergedContent);
+        }
+        merged++;
+      } else if (ownership === 'managed' || isForce) {
         console.log(`  ~ Update : ${act.relPath}`);
         if (!isDryRun) {
           fs.copyFileSync(act.srcPath, act.destPath);
@@ -516,29 +634,38 @@ async function updateCommand(args) {
         }
         updated++;
       } else {
-        console.log(`  ! Review : ${act.relPath} (customized locally, preserved; use --force to overwrite)`);
+        console.log(`  ! Review : ${act.relPath} (user-owned, preserved; pass --force to overwrite)`);
         review++;
       }
     }
   }
 
-  linkSkills(targetDir, runtime, templateDir, isDryRun, isForce);
+  linkSkills(targetDir, info.runtime, templateDir, isDryRun, isForce);
 
+  // Update manifest version and sync status
   if (!isDryRun) {
-    const updatedManifest = manifestText.replace(/version:\s*["']?[^"'\n]+["']?/, `version: "${CLI_VERSION}"`);
-    fs.writeFileSync(manifestPath, updatedManifest);
-    console.log(`  ~ Update : anr.yaml (template version -> ${CLI_VERSION})`);
+    manifestObj.template = manifestObj.template || {};
+    if (review === 0) {
+      manifestObj.template.version = CLI_VERSION;
+      manifestObj.template.sync_status = 'synced';
+      delete manifestObj.template.available_version;
+    } else {
+      manifestObj.template.available_version = CLI_VERSION;
+      manifestObj.template.sync_status = 'partial';
+    }
+    fs.writeFileSync(manifestPath, stringifyYAML(manifestObj));
   }
 
-  console.log(`\nUpdate Summary:`);
+  console.log(`\nTransaction Summary:`);
   console.log(`  + Added   : ${added} files`);
-  console.log(`  ~ Updated : ${updated} files`);
+  console.log(`  ~ Merged  : ${merged} JSON config files`);
+  console.log(`  ~ Updated : ${updated} managed files`);
   console.log(`  = In Sync : ${skipped} files`);
   if (review > 0) {
-    console.log(`  ! Review  : ${review} user-modified files preserved (use --force to overwrite)`);
+    console.log(`  ! Review  : ${review} user-modified files preserved (sync status: partial)`);
   }
   if (!isDryRun) {
-    console.log(`\n🎉 Repository updated to AI-Native Standard v2.0 (CLI v${CLI_VERSION})!`);
+    console.log(`\n🎉 Repository sync complete (Template: ${review === 0 ? CLI_VERSION : info.version}, Status: ${review === 0 ? 'synced' : 'partial'}).`);
   }
 }
 
@@ -550,4 +677,3 @@ module.exports = {
   initCommand,
   updateCommand
 };
-

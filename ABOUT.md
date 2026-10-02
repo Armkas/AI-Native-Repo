@@ -31,23 +31,24 @@ ANR solves these problems through several foundational architectural innovations
 #### A. Progressive Context Disclosure (Preserving AI Attention)
 > **Context Must Be Earned.**
 
-Agents should never ingest context all at once. The global root instruction file (`AGENTS.md`) is strictly capped at **< 2 KB**, acting purely as an ultra-lightweight "air traffic controller." The agent discovers context layer-by-layer on demand:
+Agents should never ingest context all at once. The global root instruction file (`AGENTS.md`) adheres to an ANR design budget of **<= 2048 bytes (2 KiB)**, acting purely as an ultra-lightweight "air traffic controller." The agent discovers context layer-by-layer on demand:
 
 ```text
-L0  Agent Rules (< 2KB)  →  Global router, behavior boundaries, and red lines
-L1  Project Map (< 100L) →  Physical topology map & technology stack declaration
-L2  Architecture/Domain  →  Business domain boundaries & high-level domain mechanics
-L3  Interface/Contract   →  Explicit RPC protocols, database schemas, and types
-L4  Invariants/ADR/Tests →  Inviolable business rules & architectural decision history
-L5  Implementation       →  Actual production source code
+L0  Agent Rules (<= 2048 bytes) → Global router, behavior boundaries, and red lines
+L1  Project Map (~100 lines)    → Physical topology map & technology stack declaration
+L2  Architecture/Domain         → Business domain boundaries & high-level domain mechanics
+L3  Interface/Contract          → Explicit RPC protocols, database schemas, and types
+L4  Invariants/ADR/Tests        → Inviolable business rules & architectural decision history
+L5  Implementation              → Actual production source code
 ```
 
-**Result**: Each agent task loads only the minimal context required. Token usage is slashed by up to 80%, and hallucinations are eliminated.
+**Result**: Each agent task loads only the minimal context required, reducing irrelevant context and repository-navigation ambiguity in large models.
 
-#### B. Progressive Repository Adoption (Zero-Friction for Existing Codebases)
-> **No greenfield requirement. Any existing codebase can evolve in 10 minutes.**
+#### B. Progressive Repository Adoption (Low-Friction for Existing Codebases)
+> **No greenfield requirement. Any existing codebase can adopt ANR incrementally.**
 
 Teams do not need to document their entire legacy architecture upfront. Through ANR's tiered complexity model, an existing codebase evolves organically:
+
 
 * **Day 1 (Tier 1: Light) — 10-Minute Setup**: Zero code rewrites. Scaffold a < 2KB router, let an AI agent scan your directory tree to generate a realistic `PROJECT_MAP.md`, and set red lines in `MANUAL_TASKS.md`. The AI immediately stops hallucinating project structure.
 * **Day 30 (Tier 2: Standard) — On-Demand Knowledge**: Only document what you touch. When the AI works on a specific module (e.g., billing), capture `domains/billing.md` inside that PR, and enforce closed-loop verification via the `verify` skill.

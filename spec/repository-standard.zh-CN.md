@@ -4,8 +4,16 @@
 
 ## 面向 AI 智能体 (Coding Agents) 的仓库设计规范
 
-> 关于这些规则背后的设计哲学，请参阅 [Philosophy](philosophy.zh-CN.md)
-> ([English](philosophy.md) · [日本語](philosophy.ja.md)).
+> 关于这些规则背后的设计哲学与深层考量，请参阅 [Philosophy](philosophy.zh-CN.md)
+> ([English](philosophy.md) · [日本語](philosophy.ja.md))。
+
+---
+
+## 规范术语约定 (RFC 2119)
+本规范中的关键词 **必须 (MUST)**、**禁止 (MUST NOT)**、**强制要求 (REQUIRED)**、**应当 (SHOULD)**、**建议 (RECOMMENDED)** 和 **可以 (MAY)** 依照 [RFC 2119](https://www.ietf.org/rfc/rfc2119.txt) 进行解释。
+- **规范性条款 (Normative Rules)**：硬性规定，由测试与验证器强制执行。
+- **推荐启发式 (Recommended Heuristics)**：基于认知预算与工程经验的最佳实践。
+- **资料性阐述 (Informative Rationale)**：背景原理与设计原因（详见 Philosophy）。
 
 ---
 
@@ -26,69 +34,71 @@
 
 ---
 
-# I. Context Must Be Earned (上下文必须按需获取)
+# I. 上下文管理 (Context Management)
 
-## 规则 01 — 严防上下文膨胀 (Context Bloat)
-不要在每次任务中都把所有的领域知识、规则和技能一股脑塞给 Agent。全局路由器 (`AGENTS.md`) 必须保持极简（< 2KB）。具体的上下文（例如数据库 Schema 或功能开发 Skill）必须**仅在特定任务需要时才加载**。
+## 规则 01 (规范性) — 全局路由器最小预算
+全局路由器 (`AGENTS.md`) **必须** 严格作为目录指针与路由层，**禁止** 嵌入深层业务实现、完整数据表定义或大篇幅架构文档。
+- 为防止指令膨胀并保护注意力，全局路由器 **必须** 遵循 ANR 的工程设计预算：**<= 2048 bytes (2 KiB)**。
+- 任务特定的上下文 **必须** 采用按需加载，禁止无条件注入常驻 Prompt。
 
-## 规则 02 — 渐进式呈现是路由策略，而非固定阅读顺序 (Progressive Disclosure)
-Agent 应根据任务动态路由到必要的上下文：
+## 规则 02 (启发式) — 渐进式呈现 (Progressive Disclosure)
+上下文获取 **应当** 遵循渐进式路线，而非一次性全量注入：
 `Task (任务)` → `Project Map (地图)` → `Domain / Contract (领域/契约)` → `Implementation / Test (实现/验证)`
 
 ---
 
-# II. Standardize Concepts, Isolate Runtimes (标准跨工具，实例单工具)
+# II. 标准跨工具，实例单工具 (Standardize Semantics, Isolate Runtimes)
 
-## 规则 03 — Semantic-Agnostic, Runtime-Aware, Model-Tunable (语义与模型解耦，运行时感知，模型可调)
-整个 AI 编码产业必须被拆分为三个独立维度：
-1. **Model / Model Provider (模型 / 模型提供商)**（如 OpenAI、Anthropic、Google、DeepSeek、Qwen、Meta、Moonshot、Zhipu、MiniMax）：决定底层推理引擎所属的提供商或模型家族。这里绝不要写死具体的模型版本号——提供商和模型家族的更替远比具体版本号缓慢。
-2. **Agent Runtime (智能体运行时)**（如 Claude Code、Codex、Gemini CLI、Cursor、Qwen Code、DeepSeek Harness）：决定*如何*读取文件、*何时*加载技能、*怎样*执行拦截钩子。
-3. **Repository Standard (仓库标准)**（即语义）：定义你的项目*是什么*。
+## 规则 03 (规范性) — 三层架构分离：模型提供商 × 智能体运行时 × 仓库标准
+ANR 正式确立三层解耦架构：
+1. **模型 / 模型提供商 (Model Provider)**（如 OpenAI、Anthropic、Google、DeepSeek、Qwen、Meta 等）：底层的推理引擎。模型版本号 **禁止** 硬编码进目录路径或模板分类中。
+2. **智能体运行时 (Agent Runtime)**（如 Claude Code、Codex、Gemini CLI、Cursor）：定义 *如何* 读取文件、*何时* 加载技能、*怎样* 执行拦截钩子。
+3. **仓库标准 (Repository Standard)**（规范语义意图）：定义项目架构设计与业务语义。
 
-你仓库里的语义规范（领域知识、契约、工作流）必须是 **Model-Agnostic (与模型无关的)**。然而，因为不同的运行时（Runtime）期望不同的配置结构（`.claude/`, `.cursor/rules/`, `.agents/skills/`），你的项目工程结构必须是 **Runtime-Aware (运行时感知的)**。可选地，极小一部分 prompt / skill 措辞可以是 **Model-Tunable (模型可调的)**——针对特定模型的上下文窗口或指令风格做微调——但这类调整绝不能渗透进 Repository Standard 的核心语义。
+**模型提供商 ≠ 智能体运行时，绝对禁止合并为一个维度。**
+一个 Runtime 并不归属于单个 Model Provider；Provider 矩阵统一维护在 [Model Compatibility Matrix（模型兼容性矩阵）](model-compatibility.md) 中，绝不能成为独立模板目录。
 
-**Model Provider ≠ Agent Runtime，切勿把它们合并成一个维度。** 一个 Runtime 并不专属于某一个 Model Provider（Cursor 和 Claude Code 都可以由 Anthropic、OpenAI 或 DeepSeek 等兼容 API 的模型驱动）；反过来，同一个提供商的模型也可能出现在多个 Runtime 里（Qwen Code 原生运行 Qwen，但也支持将 DeepSeek、OpenAI、Anthropic 配置为第三方 provider）。正因如此，**Model Provider 绝不能成为 Template 的一个维度**（不存在 `templates/deepseek/` 或 `templates/qwen/`），它被单独记录在 [Model Compatibility Matrix（模型兼容性矩阵）](model-compatibility.md) 中。
+## 规则 04 (规范性) — 规范语义意图的单一源头
+项目的设计意图与业务语义 **必须** 保存在 `docs/` 与 `.agents/` 中。运行时适配器（`CLAUDE.md`、`.cursor/rules/core.mdc`、`GEMINI.md`）**必须** 作为轻量包装入口，将 Agent 干净地路由到规范语义层，禁止在各工具间冗余复制相同的业务规则。
 
-**建立明确的 Runtime 所有权，避免规则漂移。**
-一个生产项目可以同时使用多个 Agent Runtime（例如开发者用 Cursor，CI 用 Claude Code），但你必须明确划分所有权。业务逻辑（`docs/domains`）是通用的，你绝不能在 `.cursor/rules/` 和 `.claude/skills` 中重复维护相同的业务规则。每个工具的 Runtime Adapter 都必须干净地将 Agent 引导回唯一的语义真理。
-
-技能与护栏同理：规范技能只在 `.agents/skills/<name>/SKILL.md` 维护一份。原生读取 `.agents/skills/` 的运行时（Codex、Cursor、Gemini CLI）无需任何额外配置；只认自己目录的运行时（Claude Code 的 `.claude/skills`）拿到的是**符号链接**而不是副本。护栏逻辑写在与运行时无关的脚本里，适配器只负责挂接触发方式（原生的编辑前钩子，外加 shell 改动也绕不过去的 CI 步骤）。详见 [Runtime Adapters](adapters.md)。
+## 规则 05 (规范性) — 规范化技能 (Agent Skills 开放标准)
+所有通用与可复用技能 **必须** 规范存放于 `.agents/skills/<name>/SKILL.md`，并严格遵守 Agent Skills 开放标准：
+- 目录名 **必须** 与 `SKILL.md` frontmatter 中的 `name` 严格一致（小写字母、数字及中划线，<= 64 字符）。
+- Frontmatter **必须** 包含非空的 `description`（<= 1024 字符），描述调起时机与使用场景。
+- 原生支持 `.agents/skills` 的运行时（Codex、Cursor、Gemini CLI）直接读取；仅认自身目录的运行时（Claude Code）通过符号链接（`.claude/skills`）进行跨工具共享，杜绝副本漂移。
 
 ---
 
-# III. The Human-Agent Boundary (人机边界)
+# III. 人机边界 (Human-Agent Boundary)
 
-## 规则 04 — Clone ≠ Trust (克隆不等于信任)
-Agent 的自动化脚本、生命周期钩子（如 `PreToolUse`）和 MCP 服务器配置可以被 Git 版本控制以保证环境可复现。但是，**Clone 代码并不意味着授予信任。** 任何能够执行代码或修改物理环境的自动化钩子和工具，在被 Agent 调用前，必须经过人类的明确授权。
+## 规则 06 (规范性) — 克隆不等于信任 (Clone ≠ Trust)
+Agent 脚本、Hooks（如 PreToolUse）和工具配置可提交至 Git。但 **Clone 代码绝不意味着授予本地环境信任。** 任何可执行本地代码或变更环境的自动化工具，在调起前 **必须** 具备显式的人类授权机制。
 
-## 规则 05 — 显式的权限边界 (`MANUAL_TASKS.md`)
-每个 AI-Native 仓库必须明确定义 AI 允许自主执行的边界和人类介入的边界：
-- **[Autonomous (自主执行)]**：例如写代码、跑单测、格式化。
-- **[Approval Required (需审批)]**：例如生产库迁移、推送到主分支。
-- **[Manual Only (仅限人类)]**：例如注入生产密钥、更新 DNS 记录、真机物理调试。
+## 规则 07 (规范性) — 显式的权限边界 (`MANUAL_TASKS.md`)
+每个 AI-Native 仓库 **必须** 在 `MANUAL_TASKS.md` 中划分确切的权限边界：
+- **[Autonomous (自主执行)]**：无需询问（如编写源码、执行测试、格式化）。
+- **[Approval Required (需审批)]**：高风险操作（如生产数据库迁移、调整核心依赖）。
+- **[Manual Only (仅限人类)]**：仅限人类手动执行（如注入生产密钥、更新生产 DNS、真机硬件联调）。
 
 ---
 
 # IV. 认知结构 (Cognitive Structure)
 
-## 规则 06 — 项目地图 (Project Map)
-必须存在一个紧凑的（< 100 行）全局地图（如 `docs/PROJECT_MAP.md`），让 AI 快速建立大局观，知道核心组件的位置。
+## 规则 08 (启发式) — 项目全局地图 (Project Map)
+项目根目录 `docs/` 下 **应当** 维护紧凑的全局地图（`PROJECT_MAP.md`），行数建议控制在 **~100 行** 以内。
 
-## 规则 07 — 接口先于实现 (Interfaces Before Implementations)
-业务能力必须优先定义接口（Protocols, abstract classes）。接口必须详尽说明职责、输入输出、错误处理和副作用。
+## 规则 09 (规范性) — 接口先于实现 (Interfaces Before Implementations)
+公共边界与跨模块调用 **必须** 优先定义接口（协议、抽象类型、契约），详尽说明职责、输入输出与副作用。
 
-## 规则 08 — 业务不变量 (Invariants)
-绝对不能被破坏的业务规则（例如“断网必须降级”或“高危操作必须二次确认”）必须被显式文档化（如 `docs/invariants/`），而不能仅仅隐藏在代码逻辑中。
-
----
-
-# V. 验证闭环 (Verification)
-
-## 规则 09 — 必须进行闭环验证
-AI Agent 写完代码并不意味着任务结束。仓库必须提供确定性的验证工具（例如 `scripts/validate.sh`、Linters、类型检查器、测试套件）。Agent 必须主动运行这些工具，并在确认返回 `exit code 0` 后才能结束任务。
+## 规则 10 (规范性) — 显式记录业务不变量 (Invariants)
+不可破坏的核心业务不变量 **必须** 显式记录于 `docs/invariants/` 并由自动化测试覆盖。
 
 ---
 
-# VI. 显式结构，拒绝过度抽象
+# V. 闭环验证 (Verification & Quality)
 
-AI-Native 不等于重度抽象。保持架构边界清晰、源文件体积小（建议 < 500 行）、符号命名具有明确业务意义。目标是为 AI 创造极小的认知边界。
+## 规则 11 (规范性) — 闭环确定性验证
+Agent 的工作在代码生成后并未完成。仓库 **必须** 提供确定性验证工具（如测试套件、类型检查、代码规范、新鲜度脚本）。Agent **必须** 自主执行验证，并在确认退出码为 `0` 后才能交付任务。
+
+## 规则 12 (启发式) — 显式结构优于过度抽象
+AI-Native 架构提倡清晰直观的物理与逻辑边界，避免过深的不必要抽象层与代理层。源文件 **应当** 保持聚焦（建议 < 500 行），降低 AI 认知负担。

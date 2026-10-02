@@ -2,21 +2,15 @@ schema_version: "2.0"
 repository:
   kind: "reference-repository"
   standard: "AI-Native Repository Standard"
+reference:
+  canonical_spec: "spec/"
+  template_source: "template-source/"
+  cli_source: "cli/"
 runtime:
   supported:
     - claude-code
     - codex
     - gemini-cli
     - cursor
-tier: "full"
-capabilities:
-  context_routing: true
-  explicit_contracts: true
-  agent_skills: true
-  deterministic_verification: true
-  human_boundary: true
-entrypoints:
-  semantic_truth: "docs/"
-  runtime_adapter: "AGENTS.md"
 verification:
   command: "./scripts/validate.sh"

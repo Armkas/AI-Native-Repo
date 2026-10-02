@@ -36,12 +36,14 @@ done < "$TMP/docs" > "$TMP/broken"
 while IFS= read -r l; do fail "Broken link: $l"; done < "$TMP/broken"
 
 # 2. No absolute local paths — they break on every other machine and after a rename.
-ABS='file:///|/Users/[^/ ]+/|/home/[^/ ]+/'
+# Detects file:///, Windows drive paths (C:\, D:/), UNC (\\server), /Volumes/, /Users/, /home/, /mnt/
+ABS='file:///|[a-zA-Z]:[/\\]|\\\\[a-zA-Z0-9_-]+[/\\]|/Volumes/|/Users/[^/ ]+/|/home/[^/ ]+/|/mnt/[^/ ]+/'
 while IFS= read -r f; do
   hit=$(grep -nE "$ABS" "$f" | head -1 | cut -c1-120)
   [ -n "$hit" ] && echo "$f: $hit"
 done < "$TMP/docs" > "$TMP/abs"
 while IFS= read -r l; do fail "Absolute local path (use a relative link): $l"; done < "$TMP/abs"
+
 
 # 3. Skills must have valid frontmatter: name == directory, non-empty description.
 for s in .agents/skills/*/SKILL.md; do

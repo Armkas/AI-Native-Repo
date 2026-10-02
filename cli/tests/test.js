@@ -7,13 +7,14 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const BIN = path.join(__dirname, '..', 'bin', 'anr.js');
-const RUNTIMES = ['claude-code', 'codex', 'gemini-cli', 'cursor'];
-const TIERS = ['light', 'standard', 'full'];
-const LANGS = ['en', 'zh-CN', 'ja'];
-const ENTRY = { 'claude-code': 'CLAUDE.md', codex: 'AGENTS.md', 'gemini-cli': 'GEMINI.md', cursor: '.cursor/rules/core.mdc' };
-const SKILL_LINKS = { 'claude-code': '.claude/skills' };
-// Native pre-edit hook config per runtime (full tier).
-const HOOK_CONFIGS = { 'claude-code': '.claude/settings.json', 'gemini-cli': '.gemini/settings.json', codex: '.codex/hooks.json', cursor: '.cursor/hooks.json' };
+const catalog = require('../../spec/runtime-catalog.json');
+const RUNTIMES = Object.keys(catalog.runtimes);
+const TIERS = catalog.tiers;
+const LANGS = catalog.languages;
+const ENTRY = Object.fromEntries(Object.entries(catalog.runtimes).map(([k, v]) => [k, v.entrypoint]));
+const SKILL_LINKS = Object.fromEntries(Object.entries(catalog.runtimes).filter(([k, v]) => v.skill_link).map(([k, v]) => [k, v.skill_link]));
+const HOOK_CONFIGS = Object.fromEntries(Object.entries(catalog.runtimes).filter(([k, v]) => v.hook_config).map(([k, v]) => [k, v.hook_config]));
+
 
 let failures = 0;
 let checks = 0;
@@ -226,7 +227,8 @@ try {
   run('node', [BIN, 'init', updateDir, '--runtime', 'claude-code', '--tier', 'standard', '--lang', 'en']);
   // Simulate an older template version
   const updateManifest = path.join(updateDir, 'anr.yaml');
-  fs.writeFileSync(updateManifest, fs.readFileSync(updateManifest, 'utf8').replace(/version:\s*"[^"]+"/, 'version: "1.0.0"'));
+  fs.writeFileSync(updateManifest, fs.readFileSync(updateManifest, 'utf8').replace(/template:\s*\n\s*version:\s*"[^"]+"/, 'template:\n  version: "1.0.0"'));
+
   
   // Dry run update: ensures zero mutations
   const updateDry = run('node', [BIN, 'update', updateDir, '--dry-run']);
@@ -237,6 +239,33 @@ try {
   const updateReal = run('node', [BIN, 'update', updateDir]);
   check(updateReal.status === 0, 'anr update should exit 0');
   check(!fs.readFileSync(updateManifest, 'utf8').includes('version: "1.0.0"'), 'anr update should update template version');
+
+  // 6. JSON Deep Merge: Verify user custom keys and permissions are preserved
+  const claudeSettings = path.join(updateDir, '.claude', 'settings.json');
+  const userSettings = JSON.parse(fs.readFileSync(claudeSettings, 'utf8'));
+  userSettings.custom_user_key = 'user_value_preserved';
+  userSettings.permissions = userSettings.permissions || {};
+  userSettings.permissions.deny = userSettings.permissions.deny || [];
+  userSettings.permissions.deny.push('Read(custom-secrets/**)');
+  fs.writeFileSync(claudeSettings, JSON.stringify(userSettings, null, 2));
+
+  // Run update again
+  const mergeUpdate = run('node', [BIN, 'update', updateDir]);
+  check(mergeUpdate.status === 0, 'anr update with custom JSON settings should exit 0');
+  const afterMerge = JSON.parse(fs.readFileSync(claudeSettings, 'utf8'));
+  check(afterMerge.custom_user_key === 'user_value_preserved', 'anr update must preserve user custom keys in JSON configs');
+  check(afterMerge.permissions.deny.includes('Read(custom-secrets/**)'), 'anr update must preserve user custom permission rules');
+
+  // 7. Manifest Corruption: Must abort cleanly with non-zero exit and no silent fallback
+  const corruptDir = path.join(cliTestDir, 'corrupt-manifest-target');
+  fs.mkdirSync(corruptDir, { recursive: true });
+  fs.writeFileSync(path.join(corruptDir, 'anr.yaml'), 'schema_version: "99.0"\nrepository:\n  kind: "unknown-kind"\n');
+  const corruptRun = run('node', [BIN, 'update', corruptDir]);
+  check(corruptRun.status !== 0, 'anr update on invalid schema manifest must fail and exit non-zero');
+
+  // 8. Doctor Command on Consumer Workspace
+  const docConsumer = run('node', [BIN, 'doctor'], { cwd: updateDir });
+  check(docConsumer.status === 0 && docConsumer.stdout.includes('Doctor inspection complete'), 'anr doctor should pass on initialized consumer repo');
 } finally {
   fs.rmSync(tmpRoot, { recursive: true, force: true });
 }

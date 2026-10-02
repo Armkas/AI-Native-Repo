@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI-Native Repository Manifest Schema",
+  "description": "Formal schema for anr.yaml in Reference and Consumer repositories",
+  "oneOf": [
+    {
+      "title": "Reference Repository",
+      "type": "object",
+      "required": ["schema_version", "repository", "reference", "runtime", "verification"],
+      "properties": {
+        "schema_version": { "type": "string", "enum": ["2.0"] },
+        "repository": {
+          "type": "object",
+          "required": ["kind", "standard"],
+          "properties": {
+            "kind": { "type": "string", "enum": ["reference-repository"] },
+            "standard": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "reference": {
+          "type": "object",
+          "required": ["canonical_spec", "template_source", "cli_source"],
+          "properties": {
+            "canonical_spec": { "type": "string" },
+            "template_source": { "type": "string" },
+            "cli_source": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "runtime": {
+          "type": "object",
+          "required": ["supported"],
+          "properties": {
+            "supported": {
+              "type": "array",
+              "items": { "type": "string", "enum": ["claude-code", "codex", "gemini-cli", "cursor"] }
+            }
+          },
+          "additionalProperties": false
+        },
+        "verification": {
+          "type": "object",
+          "required": ["command"],
+          "properties": {
+            "command": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    },
+    {
+      "title": "Consumer Repository",
+      "type": "object",
+      "required": ["schema_version", "repository", "runtime", "entrypoints", "template"],
+      "properties": {
+        "schema_version": { "type": "string", "enum": ["2.0"] },
+        "repository": {
+          "type": "object",
+          "required": ["kind", "standard"],
+          "properties": {
+            "kind": { "type": "string", "enum": ["consumer-repository"] },
+            "standard": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "runtime": {
+          "type": "object",
+          "required": ["name", "tier", "language"],
+          "properties": {
+            "name": { "type": "string", "enum": ["claude-code", "codex", "gemini-cli", "cursor"] },
+            "tier": { "type": "string", "enum": ["light", "standard", "full"] },
+            "language": { "type": "string", "enum": ["en", "zh-CN", "ja"] }
+          },
+          "additionalProperties": false
+        },
+        "entrypoints": {
+          "type": "object",
+          "required": ["canonical_intent", "semantic_router", "runtime_entrypoint", "skills"],
+          "properties": {
+            "canonical_intent": { "type": "string" },
+            "semantic_router": { "type": "string" },
+            "runtime_entrypoint": { "type": "string" },
+            "skills": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "template": {
+          "type": "object",
+          "required": ["version"],
+          "properties": {
+            "version": { "type": "string" },
+            "available_version": { "type": "string" },
+            "sync_status": { "type": "string", "enum": ["synced", "partial", "pending-review"] }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    }
+  ]
+}
