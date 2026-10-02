@@ -22,7 +22,7 @@ An Adapter must fulfill the following responsibilities:
 | :--- | :--- | :--- | :--- | :--- |
 | **Project Entry Instructions** | `CLAUDE.md` with an `@AGENTS.md` import (recent versions also read `AGENTS.md` directly when no `CLAUDE.md` exists) | `AGENTS.md` | `AGENTS.md` and/or `.cursor/rules/*.mdc` | `GEMINI.md` with an `@AGENTS.md` import |
 | **Skill (Atomic capability)** | `.claude/skills/` → symlink to `.agents/skills/` | `.agents/skills/` (native) | `.agents/skills/` (native; also `.cursor/skills/`) | `.agents/skills/` (native alias of `.gemini/skills/`, takes precedence) |
-| **Pre-edit Hook / Guardrail** | `.claude/settings.json` → `PreToolUse` (`Edit\|Write`) | `.codex/hooks.json` → `PreToolUse` (`apply_patch`; input is the patch text) | `.cursor/hooks.json` → `preToolUse` (`Write`) | `.gemini/settings.json` → `hooks.BeforeTool` (`write_file\|replace`) |
+| **Pre-edit Hook / Guardrail** | `.claude/settings.json` → `PreToolUse` (`Edit\|Write`) | `.codex/hooks.json` → `PreToolUse` (`apply_patch`; input is the patch text) | `.cursor/hooks.json` → `preToolUse` (`Write\|Edit`) | `.gemini/settings.json` → `hooks.BeforeTool` (`write_file\|replace`) |
 | **Permission Boundary** | `.claude/settings.json` `permissions` | `.codex/config.toml` approval / sandbox policy | Hooks (`beforeShellExecution`, `beforeReadFile`) | `.gemini/settings.json` |
 | **Subagent Definition** | `.claude/agents/` | `.codex/agents/*.toml` | `.cursor/agents/` (also reads `.claude/agents/`, `.codex/agents/`) | `.gemini/agents/` |
 | **Tool / MCP Server** | `.mcp.json` | `.codex/config.toml` `[mcp_servers]` | `.cursor/mcp.json` | `.gemini/settings.json` `mcpServers` |
@@ -57,7 +57,7 @@ the payload is documented:
 | Claude Code | `.claude/settings.json` `PreToolUse`, matcher `Edit\|Write\|NotebookEdit` | `tool_input.file_path` |
 | Gemini CLI | `.gemini/settings.json` `BeforeTool`, matcher `write_file\|replace` | `tool_input.file_path` |
 | Codex | `.codex/hooks.json` `PreToolUse`, matcher `apply_patch\|Edit\|Write` | `tool_input.command` = patch text; every `Add / Update / Delete / Move` target is checked |
-| Cursor | CI only (`guard-paths.sh ci origin/main`) | `preToolUse` exists, but the `Write` payload is not documented yet |
+| Cursor | `.cursor/hooks.json` `preToolUse`, matcher `Write\|Edit` | `input.path` / `tool_input.path` |
 
 Two limits apply to every runtime:
 

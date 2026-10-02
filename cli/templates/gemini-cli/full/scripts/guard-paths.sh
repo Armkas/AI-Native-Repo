@@ -73,11 +73,11 @@ case "${1:-hook}" in
   hook|*)
     input=$(cat)
     if command -v jq >/dev/null 2>&1; then
-      path=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.notebook_path // .tool_input.path // .tool_input.target_file // empty')
+      path=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.notebook_path // .tool_input.path // .tool_input.target_file // .input.path // .input.file_path // .input.target_file // empty')
       patch=$(printf '%s' "$input" | jq -r '.tool_input.command // empty | if type == "array" then join("\n") else . end')
       cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
     else
-      path=$(printf '%s' "$input" | grep -oE '"(file_path|notebook_path|target_file)"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed -E 's/.*:[[:space:]]*"([^"]*)"$/\1/')
+      path=$(printf '%s' "$input" | grep -oE '"(file_path|notebook_path|target_file|path)"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed -E 's/.*:[[:space:]]*"([^"]*)"$/\1/')
       patch=$(printf '%s' "$input" | awk '{ gsub(/\\n/, "\n"); print }')
       cwd=$(printf '%s' "$input" | grep -oE '"cwd"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed -E 's/.*:[[:space:]]*"([^"]*)"$/\1/')
     fi

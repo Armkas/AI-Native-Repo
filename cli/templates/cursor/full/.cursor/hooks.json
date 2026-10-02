@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "description": "Block edits to read-only / append-only paths (.agents/guardrails/protected-paths.txt)",
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": "bash \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)/scripts/guard-paths.sh\"",
+        "matcher": "Write|Edit"
+      }
+    ]
+  }
+}

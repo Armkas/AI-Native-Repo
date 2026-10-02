@@ -12,8 +12,8 @@ const TIERS = ['light', 'standard', 'full'];
 const LANGS = ['en', 'zh-CN'];
 const ENTRY = { 'claude-code': 'CLAUDE.md', codex: 'AGENTS.md', 'gemini-cli': 'GEMINI.md', cursor: '.cursor/rules/core.mdc' };
 const SKILL_LINKS = { 'claude-code': '.claude/skills' };
-// Native pre-edit hook config per runtime (full tier). Cursor's Write payload is undocumented, so it relies on CI.
-const HOOK_CONFIGS = { 'claude-code': '.claude/settings.json', 'gemini-cli': '.gemini/settings.json', codex: '.codex/hooks.json' };
+// Native pre-edit hook config per runtime (full tier).
+const HOOK_CONFIGS = { 'claude-code': '.claude/settings.json', 'gemini-cli': '.gemini/settings.json', codex: '.codex/hooks.json', cursor: '.cursor/hooks.json' };
 
 let failures = 0;
 let checks = 0;
@@ -152,6 +152,18 @@ try {
           check(codexPatch('*** Update File: db/migrations/001_init.sql\n*** Move to: db/old.sql') === 2, `${label}: apply_patch moving a migration must be blocked`);
           check(codexPatch('*** Add File: db/migrations/003_next.sql\n+-- y') === 0, `${label}: apply_patch adding a new migration must be allowed`);
           check(codexPatch('*** Update File: src/app.ts\n@@\n-a\n+b') === 0, `${label}: apply_patch on ordinary files must not be blocked`);
+
+          // Cursor preToolUse: input.path
+          const cursorGuard = (file, create) => {
+            const abs = path.join(dir, file);
+            if (create) { fs.mkdirSync(path.dirname(abs), { recursive: true }); fs.writeFileSync(abs, '-- x\n'); }
+            return run('bash', ['scripts/guard-paths.sh'], {
+              cwd: dir, env: { ...process.env, CLAUDE_PROJECT_DIR: '' },
+              input: JSON.stringify({ tool_name: 'Write', input: { path: abs } }),
+            }).status;
+          };
+          check(cursorGuard('db/migrations/001_init.sql', true) === 2, `${label}: Cursor Write editing an existing migration must be blocked`);
+          check(cursorGuard('db/migrations/002_new.sql', false) === 0, `${label}: Cursor Write creating a new migration must be allowed`);
 
           fs.writeFileSync(path.join(dir, 'docs', 'broken.md'), '[x](nope.md) /Users/someone/project/\n');
           const bad = run('bash', ['scripts/check-freshness.sh'], { cwd: dir });

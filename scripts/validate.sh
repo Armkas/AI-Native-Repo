@@ -94,6 +94,7 @@ else
     check_file "cli/templates/claude-code/full/.claude/settings.json"
     check_file "cli/templates/gemini-cli/full/.gemini/settings.json"
     check_file "cli/templates/codex/full/.codex/hooks.json"
+    check_file "cli/templates/cursor/full/.cursor/hooks.json"
 fi
 
 # Every runtime config (hooks, permissions, MCP) must be valid JSON, or the runtime silently ignores it.
