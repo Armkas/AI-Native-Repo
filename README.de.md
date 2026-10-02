@@ -1,11 +1,34 @@
-# AI-Native Repository Standard
+# AI-Native Repository Standard & Reference Implementation
 
 [🇺🇸 English](README.md) | [🇨🇳 简体中文](README.zh-CN.md) | [🇹🇼 繁體中文](README.zh-TW.md) | [🇯🇵 日本語](README.ja.md) | [🇪🇸 Español](README.es.md) | [🇫🇷 Français](README.fr.md) | [🇩🇪 Deutsch](README.de.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇧🇷 Português](README.pt-BR.md) | [🇰🇷 한국어](README.ko.md) | [🇮🇳 हिन्दी](README.hi.md) | [🇸🇦 العربية](README.ar.md)
 
-> **Don't just give AI more context. Give it a native workspace.**
-> **Gib der KI nicht nur mehr Kontext. Gib ihr einen nativen Arbeitsbereich.**
+> **"Die Anbieter standardisieren, wie KI in das Repository gelangt. ANR standardisiert, wie das Repository als dauerhaftes Engineering-Asset für KI-Agenten gestaltet wird."**
 
-Ein Standard, ein CLI-Scaffold und eine Referenzarchitektur zum Aufbau von Repositories, die KI-Programmieragenten autonom verstehen, navigieren, ändern und verifizieren können.
+Ein agentenübergreifender Standard, eine Referenzarchitektur und eine Plattform für das Lebenszyklus-Management zur Strukturierung, Überprüfung und Pflege von KI-freundlichen Software-Repositories.
+
+---
+
+## 🤔 Brauchst du ANR? (Zwei Wege zu einem AI-Friendly Repository)
+
+**Du musst ANR NICHT zwingend installieren, um ein KI-freundliches Repository aufzubauen.**  
+Moderne Agenten-Runtimes (Claude Code, OpenAI Codex, Cursor, Gemini CLI, Copilot) bieten bereits native Anweisungen, Regeln, Hooks und Skills. ANR trennt die **Ausführungsfähigkeit des Agenten (das Betriebssystem)** sauber von der **Architektur und Governance des Repository-Kontexts (die langlebige Organisation des Codes)**.
+
+### Weg A: Manuelles Setup ohne zusätzliche Tools (Empfohlen für Einzelentwickler & Prototypen)
+Wenn du ein persönliches Projekt oder kleines Repository verwaltest, benötigst du keine externe CLI. Befolge einfach die Kernprinzipien von ANR:
+1. **Minimaler globaler Router**: Behalte eine `AGENTS.md` (oder `CLAUDE.md`, `GEMINI.md`) im Root mit einem Budget von `<= 2048 bytes (2 KiB)`. Sie agiert als Fluglotse, der auf Kontext verweist, anstatt ein ganzes Projekt-Lexikon in den Prompt-Speicher zu laden.
+2. **Modulare Workflows über Agent Skills**: Platziere wiederholbare Prozeduren im offenen Standardformat [Agent Skills](https://agentskills.io) unter `.agents/skills/<name>/SKILL.md`.
+3. **Strukturierte Domänen- und Vertragsebenen**: Verlagere Architektur und Fachwissen nach `docs/domains/` und Datenbankschemata / API-Verträge nach `docs/contracts/`.
+4. **Aufgabenbezogene progressive Offenlegung**: Stelle sicher, dass der Agent nur die für die jeweilige Aufgabe relevante Dokumentation liest.
+5. **Deterministische Verifizierung**: Definiere explizite Test- und Build-Befehle, die erfolgreich ausgeführt werden müssen, bevor eine Arbeit als fertig deklariert wird.
+6. **Durchsetzbare menschliche Grenzen**: Schütze sensible Konfigurationen oder Release-Skripte durch Hooks oder CI-Prüfungen.
+
+---
+
+### Weg B: Standardisierte Plattform für den Lebenszyklus (ANR CLI — Für Teams & Multi-Agenten-Umgebungen)
+Beim Verwalten von Produktivsystemen in Teams oder mit mehreren KI-Agenten bietet ANR ein geprüftes, automatisiertes Rahmenwerk:
+- **Portabilität über Agenten hinweg**: Mappe eine einzige Quelle der semantischen Wahrheit (`docs/`, `.agents/skills/`) sauber auf Claude Code, Codex, Cursor und Gemini CLI, ohne Regeln zu duplizieren.
+- **Multi-Repository-Governance**: Setze konsistente strukturelle Standards, Verträge und Berechtigungsgrenzen über Dutzende von Microservices durch.
+- **Wartung & Evolution (Tag 2)**: Nutze `anr update` mit autoritätsbewusstem JSON-Merge und Veraltungsprüfung via `--prune`, und führe `anr doctor` zur Diagnose von Linkfäule und Skill-Konformität aus.
 
 ---
 

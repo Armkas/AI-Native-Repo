@@ -1,11 +1,34 @@
-# AI-Native Repository Standard
+# AI-Native Repository Standard & Reference Implementation (AI-Native 倉庫標準與參考實現)
 
 [🇺🇸 English](README.md) | [🇨🇳 简体中文](README.zh-CN.md) | [🇹🇼 繁體中文](README.zh-TW.md) | [🇯🇵 日本語](README.ja.md) | [🇪🇸 Español](README.es.md) | [🇫🇷 Français](README.fr.md) | [🇩🇪 Deutsch](README.de.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇧🇷 Português](README.pt-BR.md) | [🇰🇷 한국어](README.ko.md) | [🇮🇳 हिन्दी](README.hi.md) | [🇸🇦 العربية](README.ar.md)
 
-> **Don't just give AI more context. Give it a native workspace.**
-> **不要只是給 AI 更多的上下文。給它一個原生的工作區。**
+> **「廠商解決的是 AI 如何進入代碼庫；ANR 標準化的是代碼庫本身應當如何設計，才能成為適合 AI 長期高效工作的工程資產。」**
 
-這是一個標準、CLI 腳手架和參考架構，用於構建 AI 編碼代理可以自主理解、導航、修改和驗證的代碼庫。
+一套跨 Agent 的工程規範、參考架構與生命週期治理平台，用於組織、驗證和長期維護對 AI 友好的軟體倉庫。
+
+---
+
+## 🤔 你需要 ANR 嗎？（兩種路徑選擇）
+
+**你並不是必須安裝 ANR 才能構建對 AI 友好的倉庫。**  
+現代 Agent 運行時（Claude Code、OpenAI Codex、Cursor、Gemini CLI、Copilot）已經原生提供了 instructions、rules、hooks 與 skills 機制。ANR 的核心思想在於將**運行時能力（Runtime Capabilities，各家怎麼讀指令與調工具）**與**倉庫語義架構及治理（Repository Context Architecture & Governance，代碼庫資產怎麼組織）**嚴格解耦。
+
+### 路徑 A：零工具手工極簡方案 (Minimum Manual Setup — 適合個人與小型原型)
+如果你只有一個輕量倉庫或個人項目，完全不需要安裝任何額外 CLI，只需遵循本標準的核心設計原則：
+1. **全域路由極輕量**：在根目錄放置一個遵循預算 `<= 2048 bytes (2 KiB)` 的 `AGENTS.md`（或 `CLAUDE.md` / `GEMINI.md`），充當空中交通管制員，只做路由，絕不把整個項目百科塞進提示詞內存。
+2. **任務工作流模組化**：可複用的專項操作寫成開放標準的 [Agent Skills](https://agentskills.io) 放入 `.agents/skills/<skill-name>/SKILL.md`。
+3. **領域與契約結構化**：將業務架構與模組劃分放入 `docs/domains/`，介面與數據表契約放入 `docs/contracts/`。
+4. **上下文漸進式展開**：讓 Agent 僅在執行對應任務時按需讀取相關路徑。
+5. **確定性驗收**：定義嚴謹的構建與測試命令，宣稱完成前必須實測通過。
+6. **可執行的人類邊界**：核心敏感配置或生產發布腳本通過 hook 或 CI 阻斷非授權篡改。
+
+---
+
+### 路徑 B：標準化生命週期方案 (ANR Standard & CLI — 適合團隊與多 Agent 協作)
+當你面臨以下場景時，ANR 提供經過工程驗證的標準範式與自動化生命週期保障：
+- **跨 Agent 協同與無縫遷移**：團隊成員同時使用 Cursor、Claude Code、Codex 或 Gemini CLI，需要一套單一真實的語義資產與適配器映射，避免為每個工具重複手寫一套規則。
+- **多倉庫資產治理**：跨數十個微服務或庫統一代碼庫規範、契約結構與人機權限邊界，降低組織協作摩擦。
+- **Day 2 演進與維護**：通過 `anr update` 實現所有權感知的無損升級與 JSON 配置深度合併，通過 `anr doctor` 持續診斷死鏈與技能合規性，通過 `scripts/guard-paths.sh` 杜絕規則漂移。
 
 ---
 

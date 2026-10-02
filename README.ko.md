@@ -1,11 +1,34 @@
-# AI-Native Repository Standard
+# AI-Native Repository Standard & Reference Implementation
 
 [🇺🇸 English](README.md) | [🇨🇳 简体中文](README.zh-CN.md) | [🇹🇼 繁體中文](README.zh-TW.md) | [🇯🇵 日本語](README.ja.md) | [🇪🇸 Español](README.es.md) | [🇫🇷 Français](README.fr.md) | [🇩🇪 Deutsch](README.de.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇧🇷 Português](README.pt-BR.md) | [🇰🇷 한국어](README.ko.md) | [🇮🇳 हिन्दी](README.hi.md) | [🇸🇦 العربية](README.ar.md)
 
-> **Don't just give AI more context. Give it a native workspace.**
-> **AI에게 단지 더 많은 문맥을 주지 마세요. 네이티브 작업 공간을 제공하세요.**
+> **"벤더들은 AI가 저장소에 진입하는 방식을 표준화하고, ANR은 저장소 자체가 AI 에이전트를 위한 지속 가능한 엔지니어링 자산으로 설계되는 방식을 표준화합니다."**
 
-AI 코딩 에이전트가 자율적으로 이해하고, 탐색하고, 수정하며, 검증할 수 있는 저장소를 구축하기 위한 표준, CLI 스캐폴드 및 참조 아키텍처입니다.
+AI 코딩 에이전트가 자율적으로 이해하고, 탐색하고, 수정하며, 검증할 수 있는 저장소를 구축하고 유지하기 위한 크로스 에이전트 표준, 참조 아키텍처 및 수명 주기 거버넌스 플랫폼입니다.
+
+---
+
+## 🤔 ANR이 필요한가요? (AI-Friendly 저장소를 위한 두 가지 경로)
+
+**AI 친화적인 저장소를 구축하기 위해 반드시 ANR을 설치할 필요는 없습니다.**  
+최신 에이전트 런타임(Claude Code, OpenAI Codex, Cursor, Gemini CLI, Copilot)은 이미 네이티브 지침, 규칙, 훅 및 스킬 메커니즘을 제공합니다. ANR은 **에이전트 실행 능력(운영체제)**과 **저장소 컨텍스트 아키텍처 및 거버넌스(지속 가능한 코드 자산 구성)**를 명확히 분리합니다.
+
+### 경로 A: 도구 없는 수동 최소 설정 (개인 개발자 및 프로토타입 권장)
+개인 프로젝트나 소규모 저장소를 관리하는 경우 외부 CLI가 전혀 필요하지 않습니다. ANR의 핵심 아키텍처 원칙만 따르면 됩니다:
+1. **최소한의 전역 라우터**: 루트에 있는 `AGENTS.md`(또는 `CLAUDE.md`, `GEMINI.md`)를 `<= 2048 bytes (2 KiB)` 예산 내로 유지합니다. 프롬프트 메모리에 프로젝트 백과사전을 채우는 대신 컨텍스트로 안내하는 항공 교통 관제사 역할을 합니다.
+2. **Agent Skills를 통한 모듈식 워크플로**: 반복 가능한 절차적 작업을 개방형 [Agent Skills](https://agentskills.io) 표준 형식으로 `.agents/skills/<name>/SKILL.md`에 배치합니다.
+3. **구조화된 도메인 및 계약 레이어**: 비즈니스 아키텍처는 `docs/domains/`로, 데이터베이스 스키마 및 API 계약은 `docs/contracts/`로 분리합니다.
+4. **작업 관련 점진적 컨텍스트 공개**: 에이전트가 현재 작업과 관련된 문서만 읽도록 보장합니다.
+5. **결정론적 검증**: 에이전트가 작업을 완료했다고 선언하기 전에 통과해야 하는 명시적인 빌드 및 테스트 명령을 정의합니다.
+6. **실행 가능한 인간 권한 경계**: 민감한 설정이나 릴리스 스크립트를 훅이나 CI 검사를 통해 보호합니다.
+
+---
+
+### 경로 B: 표준화된 수명 주기 플랫폼 (ANR CLI — 팀 및 다중 에이전트 환경)
+팀 단위로 프로덕션 시스템을 운영하거나 여러 AI 에이전트를 함께 사용할 때, ANR은 검증되고 자동화된 수명 주기 프레임워크를 제공합니다:
+- **에이전트 간 이식성**: 단일 진실 소스(`docs/`, `.agents/skills/`)를 Claude Code, Codex, Cursor, Gemini CLI에 규칙 중복 없이 깔끔하게 매핑합니다.
+- **다중 저장소 거버넌스**: 수십 개의 마이크로서비스 또는 라이브러리 전반에 걸쳐 일관된 구조적 표준, 계약 및 권한 경계를 적용합니다.
+- **Day 2 유지 관리 및 진화**: 작성자를 존중하는 JSON 병합 및 `--prune` 폐기 파일 정리를 지원하는 `anr update`와 링크 끊김 및 스킬 준수를 진단하는 `anr doctor`를 사용합니다.
 
 ---
 

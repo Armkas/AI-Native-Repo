@@ -1,11 +1,34 @@
-# AI-Native Repository Standard
+# AI-Native Repository Standard & Reference Implementation
 
 [🇺🇸 English](README.md) | [🇨🇳 简体中文](README.zh-CN.md) | [🇹🇼 繁體中文](README.zh-TW.md) | [🇯🇵 日本語](README.ja.md) | [🇪🇸 Español](README.es.md) | [🇫🇷 Français](README.fr.md) | [🇩🇪 Deutsch](README.de.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇧🇷 Português](README.pt-BR.md) | [🇰🇷 한국어](README.ko.md) | [🇮🇳 हिन्दी](README.hi.md) | [🇸🇦 العربية](README.ar.md)
 
-> **Don't just give AI more context. Give it a native workspace.**
-> **Ne vous contentez pas de donner plus de contexte à l'IA. Donnez-lui un espace de travail natif.**
+> **"Les fournisseurs standardisent la façon dont l'IA entre dans le dépôt. ANR standardise la façon dont le dépôt est conçu comme un actif d'ingénierie durable pour les agents d'IA."**
 
-Un standard, un générateur CLI et une architecture de référence pour construire des dépôts que les agents de codage IA peuvent comprendre, naviguer, modifier et vérifier de manière autonome.
+Un standard multi-agents, une architecture de référence et une plateforme de gouvernance du cycle de vie pour structurer, vérifier et maintenir des dépôts logiciels adaptés à l'IA.
+
+---
+
+## 🤔 Avez-vous besoin d'ANR ? (Deux chemins vers un dépôt AI-Friendly)
+
+**Vous n'avez PAS besoin d'installer ANR pour construire un dépôt adapté à l'IA.**  
+Les environnements d'agents modernes (Claude Code, OpenAI Codex, Cursor, Gemini CLI, Copilot) fournissent déjà des instructions, règles, hooks et compétences natifs. ANR sépare clairement **l'Exécution de l'Agent (le système d'exploitation)** de **l'Architecture et la Gouvernance du Contexte du Dépôt (l'organisation durable du code)**.
+
+### Chemin A : Configuration Manuelle Sans Outils (Recommandé pour les développeurs solo et les prototypes)
+Si vous maintenez un projet personnel ou un petit dépôt, vous n'avez besoin d'aucun CLI externe. Appliquez simplement les principes fondamentaux d'ANR :
+1. **Routeur Global Minimal** : Conservez un `AGENTS.md` (ou `CLAUDE.md`, `GEMINI.md`) à la racine respectant un budget de `<= 2048 bytes (2 KiB)`. Il agit comme un contrôleur aérien, guidant vers le contexte plutôt que de charger une encyclopédie dans la mémoire de prompt.
+2. **Flux de Travail Modulaires via Agent Skills** : Placez les actions procédurales réutilisables au format ouvert [Agent Skills](https://agentskills.io) sous `.agents/skills/<nom>/SKILL.md`.
+3. **Couches Structurées de Domaines et de Contrats** : Déplacez l'architecture et la logique métier dans `docs/domains/`, et les schémas de base de données / API dans `docs/contracts/`.
+4. **Divulgation Progressive du Contexte** : Assurez-vous que l'agent ne lit que la documentation pertinente pour sa tâche actuelle.
+5. **Vérification Déterministe** : Définissez des commandes explicites de test et de compilation qui doivent réussir avant que l'agent ne déclare le travail terminé.
+6. **Limites Humaines Applicables** : Protégez les configurations sensibles ou les scripts de déploiement via des hooks ou des vérifications CI.
+
+---
+
+### Chemin B : Plateforme de Cycle de Vie Standardisée (ANR CLI — Pour les équipes et environnements multi-agents)
+Lors de la gestion de systèmes de production en équipe ou avec plusieurs agents d'IA, ANR offre un cadre audité et automatisé :
+- **Portabilité Multi-Agents** : Mappez une source unique de vérité sémantique (`docs/`, `.agents/skills/`) proprement entre Claude Code, Codex, Cursor et Gemini CLI sans dupliquer de règles.
+- **Gouvernance Multi-Dépôts** : Appliquez des standards structurels, des contrats et des limites de permissions cohérents sur des dizaines de microservices.
+- **Maintenance et Évolution (Jour 2)** : Utilisez `anr update` avec fusion JSON respectueuse de la propriété et détection des fichiers obsolètes avec `--prune`, et exécutez `anr doctor` pour auditer la conformité des compétences.
 
 ---
 
