@@ -24,6 +24,7 @@
 │   ├── contracts/          # API RPC & database schema contracts
 │   ├── invariants/         # Inviolable business rules & guardrails
 │   ├── adr/                # Architectural Decision Records
+│   ├── plans/              # Versioned task plans: goal, acceptance criteria, decision log
 │   └── domains/            # Vertical business domain knowledge
 │
 └── [src / apps / ...]  # Software Runtime Architecture & Implementation

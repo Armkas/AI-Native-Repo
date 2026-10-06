@@ -1,6 +1,6 @@
 # [项目名称] — AGENTS.md
 
-> 面向所有 AI 编程代理的、与运行时无关的入口文件。本文件只做**路由**（<= 2048 字节）：指向上下文，而不承载上下文。
+> 与运行时无关的 AI 代理入口。只做**路由**（<= 2048 字节）：指向上下文，不承载上下文。
 
 ## 宣称"完成"之前必须验证
 
@@ -11,11 +11,11 @@
 bash scripts/check-freshness.sh   # AI 上下文层不得腐化
 ```
 
-完整流程见技能 [`verify`](.agents/skills/verify/SKILL.md)。命令无法执行时必须明确告知用户。
+完整流程见技能 [`verify`](.agents/skills/verify/SKILL.md)。命令无法执行时必须明确说明。
 
-## 护栏
+## 护栏与评测
 
-受保护路径见 [.agents/guardrails/protected-paths.txt](.agents/guardrails/protected-paths.txt)，由 `scripts/guard-paths.sh` 强制执行。被拦截就是停止信号 —— 去问人类。
+[受保护路径](.agents/guardrails/protected-paths.txt)由 `scripts/guard-paths.sh` 强制执行；被拦截就停下，去问人类。被评测时不得修改 [evals/](evals/README.md)。
 
 ## 范围与状态
 
@@ -31,9 +31,10 @@ bash scripts/check-freshness.sh   # AI 上下文层不得腐化
 4. 组件如何连接：[docs/contracts/](docs/contracts/backend_rpc.md)
 5. 为什么这样 / 什么绝不能破坏：[docs/adr/](docs/adr/README.md)、[docs/invariants/](docs/invariants/business_invariants.md)
 6. 影响半径：[.agents/dependency-map.md](.agents/dependency-map.md)
-7. 最后才是：`Interface`，然后是实现。
+7. 任务意图：验收标准，[docs/plans/](docs/plans/README.md)
+8. 最后才是：`Interface`，然后是实现。
 
 ## 技能（按需加载）
 
-规范技能统一存放在 [.agents/skills/](.agents/skills/)。遇到匹配的任务请使用对应技能，不要即兴发挥：
-`feature-development` · `bug-fix` · `database-migration` · `api-contract-change` · `verify` · `doc-sync`
+规范技能在 [.agents/skills/](.agents/skills/)，有匹配的就用，不要即兴发挥：
+`feature-development` · `bug-fix` · `database-migration` · `api-contract-change` · `verify` · `review` · `doc-sync`

@@ -92,7 +92,23 @@
           "properties": {
             "version": { "type": "string" },
             "available_version": { "type": "string" },
-            "sync_status": { "type": "string", "enum": ["synced", "partial", "pending-review"] }
+            "sync_status": { "type": "string", "enum": ["synced", "partial"] },
+            "skill_mirror": { "type": "string", "enum": ["symlink", "managed-copy", "user-owned"] },
+            "managed_files": {
+              "type": "array",
+              "description": "Repo-relative paths written by anr from the template.",
+              "items": { "type": "string" }
+            },
+            "managed_hashes": {
+              "type": "object",
+              "description": "Repo-relative path -> sha256 prefix of the content anr last wrote. A file that still matches is unmodified and may be updated or pruned without --force.",
+              "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{16,64}$" }
+            },
+            "obsolete_files": {
+              "type": "array",
+              "description": "Previously managed files no longer in the template and not yet pruned.",
+              "items": { "type": "string" }
+            }
           },
           "additionalProperties": false
         }

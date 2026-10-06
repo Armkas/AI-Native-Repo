@@ -311,6 +311,21 @@ function validateManifest(manifest, catalog) {
     }
   }
 
+  if (manifest.template.managed_hashes !== undefined) {
+    const hashes = manifest.template.managed_hashes;
+    if (!hashes || typeof hashes !== 'object' || Array.isArray(hashes)) {
+      throw new Error("Invalid 'template.managed_hashes': expected a map of relative file path -> content fingerprint.");
+    }
+    for (const [f, h] of Object.entries(hashes)) {
+      if (!isSafeRelativePath(f)) {
+        throw new Error(`Invalid path in 'template.managed_hashes': expected safe relative path, got '${f}'.`);
+      }
+      if (typeof h !== 'string' || !/^[0-9a-f]{16,64}$/.test(h)) {
+        throw new Error(`Invalid fingerprint for '${f}' in 'template.managed_hashes': expected 16-64 lowercase hex characters.`);
+      }
+    }
+  }
+
   return {
     kind: 'consumer',
     runtime: rName,

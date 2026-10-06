@@ -1,6 +1,7 @@
 # AI-Native Repository Tiers
 
 The AI-Native Repository Standard introduces **Tiers** to define the complexity, maturity, and automation profile of a repository. 
+Which rules are required in which tier is defined in the [Conformance by Tier](repository-standard.md#conformance-by-tier) table of the Standard.
 Tier is completely orthogonal to the Agent Runtime (e.g., Claude Code, Cursor) and the Model Provider (e.g., Anthropic, OpenAI, DeepSeek) — see [Model Compatibility Matrix](model-compatibility.md).
 
 You choose a Tier based on your team's needs, not the tool you use.
@@ -16,7 +17,7 @@ You choose a Tier based on your team's needs, not the tool you use.
 - **Verification:** Basic testing.
 - **Human Boundary:** Minimal but explicit.
 
-**Ships (`anr init --tier light`):** `AGENTS.md` router, runtime adapter, `docs/PROJECT_MAP.md`, `docs/architecture/overview.md`, `MANUAL_TASKS.md`, skill `verify`.
+**Ships (`anr init --tier light`):** `AGENTS.md` router, runtime adapter, `docs/PROJECT_MAP.md`, `docs/architecture/overview.md`, `MANUAL_TASKS.md` (the three permission levels: Autonomous / Approval Required / Manual Only), skill `verify`.
 
 *Philosophy:* Establish Context Routing first, before building heavy automation infrastructure.
 
@@ -27,11 +28,11 @@ You choose a Tier based on your team's needs, not the tool you use.
 **Core Capabilities:**
 - **Context:** Project Map, Domain Docs, Explicit Contracts, Invariants, ADRs.
 - **Rules:** Root instructions + scoped local rules.
-- **Skills/Workflows:** Several core reusable workflows (Feature Dev, Bug Fix, Verification).
-- **Verification:** Unit tests, linting, CI, repository validation.
+- **Skills/Workflows:** Several core reusable workflows (Feature Dev, Bug Fix, Verification), acceptance criteria before implementation, versioned plans for multi-session work.
+- **Verification:** Unit tests, linting, CI, repository validation — then an independent, rubric-based `review` for what commands cannot decide (bounded LLM-as-a-judge).
 - **Human Boundary:** Explicit `MANUAL_TASKS.md` for production and destructive actions.
 
-**Ships (`anr init --tier standard`):** everything in Light, plus `.agents/rules/global.md`, `.agents/context-index.md`, `.agents/dependency-map.md`, domains / contracts / invariants / ADR docs, and skills `feature-development`, `bug-fix`, `database-migration`, `api-contract-change`, `verify`, `doc-sync`. Claude Code additionally gets `.claude/settings.json` permission boundaries (deny secrets and force-push, ask before push).
+**Ships (`anr init --tier standard`):** everything in Light, plus `.agents/rules/global.md`, `.agents/context-index.md`, `.agents/dependency-map.md`, domains / contracts / ADR docs, invariants with stable `INV-` IDs, `docs/plans/` (plan template), and skills `feature-development`, `bug-fix`, `database-migration`, `api-contract-change`, `verify`, `review` (with `rubric.md`), `doc-sync`. Claude Code additionally gets `.claude/settings.json` permission boundaries (deny secrets and force-push, ask before push).
 
 *Philosophy:* A balanced workspace where AI has structured knowledge and deterministic guardrails.
 
@@ -43,10 +44,10 @@ You choose a Tier based on your team's needs, not the tool you use.
 - **Context:** Generated context indexes, dependency maps, machine-readable manifest (`anr.yaml`), automated freshness checks.
 - **Rules:** Detailed scoped rules, strict distinction between Advisory Rules and Guardrails.
 - **Skills/Workflows:** Full set of standard skills, lifecycle hooks, MCP tool integrations.
-- **Verification:** Level 1 (Static freshness & schema checks) + Level 2 (Native runtime pre-edit hooks & unbypassable CI guardrails).
+- **Verification:** Level 1 (Static freshness & schema checks) + Level 2 (Native runtime pre-edit hooks & unbypassable CI guardrails) + Level 3 (Behavioral evals of the context layer: deterministic grader first, model judge second).
 - **Human Boundary:** Strict permission boundaries and detailed manual task escalation.
 
-**Ships (`anr init --tier full`):** everything in Standard, plus `.agents/guardrails/protected-paths.txt` (read-only / append-only paths) enforced by `scripts/guard-paths.sh` (wired as a native pre-edit hook in Claude Code, Codex, Gemini CLI, and Cursor), `.github/workflows/ai-guardrail.yml` (remote CI layer that shell edits cannot bypass), and `scripts/check-freshness.sh` (detects broken links, absolute paths, malformed skills, oversized router, stale index paths, and god files).
+**Ships (`anr init --tier full`):** everything in Standard, plus `.agents/guardrails/protected-paths.txt` (read-only / append-only paths) enforced by `scripts/guard-paths.sh` (wired as a native pre-edit hook in Claude Code, Codex, Gemini CLI, and Cursor), `.github/workflows/ai-guardrail.yml` (remote CI layer that shell edits cannot bypass), `scripts/check-freshness.sh` (detects broken links, absolute paths, malformed skills, oversized router, stale index paths, and god files; reports which `INV-` IDs no test references yet), and `evals/` with a sample scenario plus `scripts/eval-check.sh` (deterministic grader: files that must / must not change). A human can approve a deliberate change to a protected path with the `guardrail-override` pull-request label.
 
 *Philosophy:* Maximum automation, but with strictly controlled Context Cost and rigid, dual-layer verification closed-loops.
 

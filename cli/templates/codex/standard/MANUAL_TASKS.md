@@ -1,43 +1,46 @@
-# 📋 Manual Tasks Checklist (MANUAL_TASKS.md)
+# 📋 Human / Agent Boundary (MANUAL_TASKS.md)
 
 > [!NOTE]
-> This document tracks tasks that require **human intervention, external dashboard actions, or manual verification**.
-> AI Agents cannot access external third-party consoles or physical devices. When a task requires human intervention, record it here with an actionable `[ ]` checkbox and notify the user.
+> The permission contract between humans and AI agents. Agents read this file before any action that is
+> more than editing code and running checks. Silence is not approval.
+> These rules are **advisory**: anything that must be physically impossible also belongs in a guardrail
+> (runtime permissions, hooks, CI, branch protection).
 
 ---
 
-## 1. 🌐 Frontend & Web
+## 1. [Autonomous] — the agent may do these without asking
 
-- [ ] **1.1 Custom Domain & DNS**
-  - [ ] Configure custom domain DNS records (CNAME / A records)
-  - [ ] Verify SSL/TLS certificates in hosting dashboard
-- [ ] **1.2 Third-Party Authentication & OAuth**
-  - [ ] Register OAuth credentials in developer console (Google, GitHub, etc.)
-  - [ ] Add production redirect URLs to OAuth allowlist
+- Read and edit application source, tests and docs inside this repository
+- Run the verification commands declared in `AGENTS.md` (typecheck, build, lint, tests)
+- Keep `docs/` and `.agents/` in sync with the code it changed
+- Create local branches and local commits for the current task
+
+## 2. [Approval Required] — propose, explain the impact, then wait for an explicit "yes"
+
+- Adding, removing or upgrading dependencies
+- Database schema changes (apply to a local / dev database only after approval)
+- Breaking changes to a public API, RPC contract or data format
+- Changing CI, hooks, guardrails, permission settings or this file
+- `git push`, opening or merging pull requests
+- Deleting files, data or branches the agent did not create in this task
+
+## 3. [Manual Only] — humans do these; the agent prepares exact instructions and stops
+
+- Production secrets, credentials and environment variables
+- Production deploys, production database migrations, DNS and certificates
+- Third-party consoles: app stores, OAuth providers, payment, push notification keys, webhooks
+- Physical device and hardware testing (camera, microphone, location, offline / reconnect)
+- Overriding a guardrail or a failing required check
+
+> When an agent reaches a [Manual Only] step, it adds a checkbox under **Pending** below, says *why* the
+> step is human-owned, and tells the user. It never works around the boundary.
 
 ---
 
-## 2. ⚙️ Backend & Cloud Infrastructure
+## 4. Pending human tasks
 
-- [ ] **2.1 Production Database Migration**
-  - [ ] Review pending migration scripts
-  - [ ] Run production migration command: `<your-migration-command>`
-- [ ] **2.2 Production Secrets & Environment Variables**
-  - [ ] Inject production secrets into cloud hosting platform
-- [ ] **2.3 Webhook Endpoints**
-  - [ ] Register callback URLs in external partner dashboards
-  - [ ] Save webhook signing secret to server environment
+<!-- Example entries — replace them with your own. -->
 
----
-
-## 3. 📱 Mobile App (iOS / Android)
-
-- [ ] **3.1 Developer Accounts & Certificates**
-  - [ ] Set up App ID, provisioning profiles, and signing certificates
-  - [ ] Configure push notification service keys (APNs / FCM)
-- [ ] **3.2 In-App Purchases & Store Metadata**
-  - [ ] Create products and pricing tiers in App Store Connect / Play Console
-  - [ ] Submit app review credentials (demo account)
-- [ ] **3.3 Physical Device Testing**
-  - [ ] Test hardware permissions on real devices (Camera, Microphone, Location)
-  - [ ] Verify offline behavior and network reconnect flows
+- [ ] **Example — production migration**: review `<migrations-dir>/<file>` and run `<your-migration-command>` against production. *Human-owned: production write.*
+- [ ] **Example — OAuth redirect**: add `https://<prod-domain>/auth/callback` to the provider's allowlist. *Human-owned: third-party console.*
+- [ ] **Example — device check**: verify the microphone permission prompt on a real iPhone and Android device. *Human-owned: physical hardware.*

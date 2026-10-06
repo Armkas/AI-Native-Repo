@@ -26,9 +26,10 @@ Full procedure: skill [`verify`](.agents/skills/verify/SKILL.md). If a command c
 4. How parts connect: [docs/contracts/](docs/contracts/backend_rpc.md)
 5. Why it is so / what must never break: [docs/adr/](docs/adr/README.md), [docs/invariants/](docs/invariants/business_invariants.md)
 6. Blast radius: [.agents/dependency-map.md](.agents/dependency-map.md)
-7. Only then: the `Interface`, then the implementation.
+7. Task intent: acceptance criteria, [docs/plans/](docs/plans/README.md)
+8. Only then: the `Interface`, then the implementation.
 
 ## Skills (load on demand)
 
 Canonical skills live in [.agents/skills/](.agents/skills/). Use the matching one instead of improvising:
-`feature-development` · `bug-fix` · `database-migration` · `api-contract-change` · `verify` · `doc-sync`
+`feature-development` · `bug-fix` · `database-migration` · `api-contract-change` · `verify` · `review` · `doc-sync`

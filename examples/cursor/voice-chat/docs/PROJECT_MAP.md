@@ -3,24 +3,28 @@
 This example stacks an AI Context Layer on a conventional iOS runtime:
 
 ```text
-AI Context Layer
+AI Context Layer          AGENTS.md, docs/, .agents/
         ↓
-Feature-based Architecture
+Feature-based boundaries  ios/Features/<Name>/
         ↓
-MVVM / Clean
+MVVM / Clean              View → ViewModel → Service → Repository
         ↓
-Swift Implementation
+Swift implementation
 ```
 
-## Top-Level Directory
-- `AGENTS.md` — Agent working contract (cognitive entry).
-- `.agents/` — Indices and skills.
-- `docs/` — **AI Context Architecture** (architecture, domains, ADRs, invariants).
-- `ios/` — **Runtime Architecture + implementation** (Feature + MVVM / Clean).
+## Top-level directory
 
-## Major Subsystems and Locations
-1. **Voice Domain**
-   - Context: [docs/domains/voice.md](domains/voice.md)
-   - Runtime: `ios/Features/Voice/` (`Interface/` → `Application/`)
-2. **Navigation Domain**
-   - Runtime: `ios/Features/Navigation/`
+- `AGENTS.md` — agent working contract (router).
+- `MANUAL_TASKS.md` — human / agent permission boundary.
+- `.agents/skills/` — canonical skills (`verify`).
+- `docs/` — **AI Context Architecture**: domains, invariants, ADRs.
+- `ios/` — **runtime architecture + implementation** (Feature + MVVM / Clean).
+- `Package.swift` — builds the Voice feature as a Swift package so `swift test` runs without Xcode.
+
+## Subsystems
+
+| Domain | Knowledge | Interface | Implementation | Tests |
+| :--- | :--- | :--- | :--- | :--- |
+| **Voice** | [domains/voice.md](domains/voice.md) | `ios/Features/Voice/Interface/` | `ios/Features/Voice/Application/` | `ios/Tests/VoiceTests/` |
+
+Add a row when you add a feature.

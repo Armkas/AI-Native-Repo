@@ -81,9 +81,9 @@ ANR defines 8 operational pillars that turn codebases into agent workshops:
 | **2. Rules** | "Constraints & Directions" | `AGENTS.md`, `.cursor/rules/`, `CLAUDE.md`, `GEMINI.md` |
 | **3. Contracts** | "How components connect" | `docs/contracts/`, API schemas, database schemas |
 | **4. Skills** | "How to do atomic tasks" | `.agents/skills/<name>/SKILL.md` (Open Agent Skills standard) |
-| **5. Workflows** | "How to orchestrate processes"| Standard Operating Procedures (SOPs), feature dev workflows |
+| **5. Workflows** | "How to orchestrate processes"| SOPs, feature dev workflows, acceptance criteria, versioned plans (`docs/plans/`) |
 | **6. Tools** | "How to touch the world" | MCP Servers, deterministic CLI utilities, build tools |
-| **7. Verification** | "Closed-loop proof" | Automated test runners, linters, pre-edit blocking hooks |
+| **7. Verification & Evaluation** | "Closed-loop proof" | Test runners, linters, pre-edit blocking hooks; then a bounded, rubric-based `review` (LLM-as-a-judge) and behavioral `evals/` |
 | **8. Boundaries** | "Human-Agent trust barrier" | `MANUAL_TASKS.md` (Autonomous vs. Approval vs. Manual Only) |
 
 ---
@@ -91,6 +91,7 @@ ANR defines 8 operational pillars that turn codebases into agent workshops:
 ### 4. Deterministic Verification & Real-Time Guardrails
 
 * **Done Means Exit Code 0**: An AI agent's job is not complete when code is written; it is complete only when local automated verification produces deterministic proof of success.
+* **Bounded Judgement for the Rest**: What no command can decide — acceptance criteria met, scope kept, docs still true — is reviewed by an independent model against a versioned rubric, with `UNKNOWN` allowed and no power to override a failing check. Behavioral evals measure whether the context layer itself leads agents to the right behavior.
 * **Native Pre-Edit Blocking Hooks**: Through `scripts/guard-paths.sh`, ANR wires native pre-edit hooks into Claude Code (`PreToolUse`), Gemini CLI (`BeforeTool`), Codex (`PreToolUse`), and Cursor (`preToolUse`). If an agent attempts to edit sensitive files (e.g., historical migrations, `.env`), the call is blocked in real-time with exit code `2` before the file is touched.
 
 ---
@@ -110,9 +111,9 @@ ANR defines 8 operational pillars that turn codebases into agent workshops:
      ```
    - 12 pre-built template matrices (4 Runtimes × 3 Tiers).
 3. **Reference Implementations (`examples/`)**:
-   - Production-ready reference implementations across Claude Code, Cursor, Codex, and Gemini CLI.
+   - Minimal, runnable reference implementations (a Swift package with invariant-named tests) for Claude Code, Cursor, Codex, and Gemini CLI.
 4. **Multi-Lingual Global Alignment**:
-   - Full specification and documentation synchronized across 13 languages.
+   - README in 13 languages; the Standard in English and Simplified Chinese; the Philosophy in English, Simplified Chinese and Japanese.
 
 ---
 

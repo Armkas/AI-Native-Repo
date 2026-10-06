@@ -1,6 +1,6 @@
 # Model Compatibility Matrix
 
-> See [Repository Standard — Rule 03](repository-standard.md#rule-03--semantic-agnostic-runtime-aware-model-tunable) for why Model Provider and Agent Runtime are kept as separate axes.
+> See [Repository Standard — Rule 03](repository-standard.md#rule-03-normative--separation-of-concerns-model-provider--agent-runtime--repository-standard) for why Model Provider and Agent Runtime are kept as separate axes.
 
 The AI-Native Repository Standard separates the **Model Provider** from the **Agent Runtime**.
 
@@ -10,7 +10,7 @@ This matrix documents the known compatibility between Agent Runtimes and Model P
 
 ## Current Reference Runtimes vs. Emerging Runtimes
 
-This repository ships first-class adapters and templates (`templates/`, `examples/`) for four **Reference Runtimes**:
+This repository ships first-class adapters and templates (`template-source/`, generated into `cli/templates/`, plus `examples/`) for four **Reference Runtimes**:
 
 - `claude-code`, `codex`, `gemini-cli`, `cursor`
 
@@ -51,5 +51,17 @@ This table will be extended as new Model Providers (e.g. Meta/Llama, Moonshot/Ki
 If Model Provider became a template axis, `Runtime × Tier` (today 4 × 3 = 12) would become `Runtime × Tier × Model` and grow combinatorially every time a new provider ships an API-compatible endpoint. Instead:
 
 1. **Repository Semantics**: Entirely Model-Agnostic — unaffected by which provider you use.
-2. **Runtime Integration**: Runtime-Aware — captured by the existing `templates/<runtime>/<tier>` structure (e.g. `.cursor/rules`, `.claude/settings.json`).
+2. **Runtime Integration**: Runtime-Aware — captured by the existing `template-source/runtimes/<runtime>/` layers (generated into `cli/templates/<runtime>/<tier>`) (e.g. `.cursor/rules`, `.claude/settings.json`).
 3. **Model Optimization**: Optional / Model-Tunable — a small, isolated layer (e.g. tuning a skill's wording for a specific model's context window) that never becomes part of the Repository Standard itself.
+
+## Models as Judges
+
+A model that grades work ([Rule 13](repository-standard.md#rule-13-normative--verification-hierarchy--bounded-judges)) is configuration, not part of the standard — the same rule as above applies:
+never hard-code a provider into a rubric, a scenario or a directory name.
+
+- **Record it.** Every review or eval result names the judge model (and the agent model it judged). A score that changed
+  is unexplainable if the model changed silently.
+- **Prefer independence.** A judge from a different context — and, where available, a different model family — than the
+  author shares fewer of its blind spots.
+- **Re-calibrate on change.** Switching the judge model invalidates its calibration against human grades; re-run the
+  human sample before letting its verdicts gate anything.

@@ -4,6 +4,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { parseSkillFrontmatter } = require('../src/yaml.js');
 
@@ -52,6 +53,11 @@ function frontmatter(file) {
   return Object.fromEntries(m[1].split('\n').map(l => l.match(/^(\w+):\s*(.*)$/)).filter(Boolean).map(x => [x[1], x[2]]));
 }
 
+// Same fingerprint the CLI records in anr.yaml (template.managed_hashes).
+function fileHash(p) {
+  return crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex').slice(0, 16);
+}
+
 function run(cmd, args, opts = {}) {
   return spawnSync(cmd, args, { encoding: 'utf8', ...opts });
 }
@@ -84,6 +90,9 @@ try {
 
         const skillsDir = path.join(dir, '.agents', 'skills');
         check(fs.existsSync(path.join(skillsDir, 'verify', 'SKILL.md')), `${label}: missing core skill 'verify'`);
+        // Rule 07: the human / agent boundary has exactly these three permission levels, in every tier and language.
+        const manual = fs.readFileSync(path.join(dir, 'MANUAL_TASKS.md'), 'utf8');
+        check(['[Autonomous]', '[Approval Required]', '[Manual Only]'].every(t => manual.includes(t)), `${label}: MANUAL_TASKS.md must define [Autonomous] / [Approval Required] / [Manual Only]`);
         for (const name of fs.existsSync(skillsDir) ? fs.readdirSync(skillsDir) : []) {
           const content = fs.readFileSync(path.join(skillsDir, name, 'SKILL.md'), 'utf8');
           const res = parseSkillFrontmatter(content, name);
@@ -91,6 +100,9 @@ try {
         }
         if (tier !== 'light') {
           check(fs.readdirSync(skillsDir).length >= 5, `${label}: standard/full should ship the core skill set`);
+          check(fs.existsSync(path.join(skillsDir, 'review', 'rubric.md')), `${label}: standard/full should ship the review skill with its rubric`);
+          check(fs.existsSync(path.join(dir, 'docs', 'plans', 'plan-template.md')), `${label}: standard/full should ship the plan template`);
+          check(/INV-\d+/.test(fs.readFileSync(path.join(dir, 'docs', 'invariants', 'business_invariants.md'), 'utf8')), `${label}: invariants need stable INV- IDs (Rule 10)`);
         }
 
         if (SKILL_LINKS[runtime]) {
@@ -169,6 +181,17 @@ try {
           check(cursorGuard('db/migrations/001_init.sql', true) === 2, `${label}: Cursor Write editing an existing migration must be blocked`);
           check(cursorGuard('db/migrations/002_new.sql', false) === 0, `${label}: Cursor Write creating a new migration must be allowed`);
 
+          // Behavioral eval grader: the shipped scenario fails on an untouched tree and passes once the contract changes.
+          const scenario = 'evals/scenarios/api-add-optional-field.md';
+          run('git', ['add', '-A'], { cwd: dir });
+          run('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'scaffold'], { cwd: dir });
+          check(run('bash', ['scripts/eval-check.sh', scenario], { cwd: dir }).status === 1, `${label}: eval-check.sh must fail when must_change is not met`);
+          fs.appendFileSync(path.join(dir, 'docs', 'contracts', 'backend_rpc.md'), '\n<!-- avatarUrl -->\n');
+          check(run('bash', ['scripts/eval-check.sh', scenario], { cwd: dir }).status === 0, `${label}: eval-check.sh must pass when the scenario is satisfied`);
+          fs.appendFileSync(path.join(dir, scenario), '\n');
+          check(run('bash', ['scripts/eval-check.sh', scenario], { cwd: dir }).status === 1, `${label}: eval-check.sh must fail when the agent edits evals/`);
+          run('git', ['checkout', '-q', '--', '.'], { cwd: dir });
+
           // Test CI layer: guard-paths.sh ci <base-ref> prevents bypassing hooks via shell/git
           run('git', ['config', 'user.name', 'CI Test'], { cwd: dir });
           run('git', ['config', 'user.email', 'ci@example.com'], { cwd: dir });
@@ -179,6 +202,14 @@ try {
           const ciCheck = run('bash', ['scripts/guard-paths.sh', 'ci', 'HEAD~1'], { cwd: dir });
           check(ciCheck.status === 1, `${label}: guard-paths.sh ci must fail when protected paths are committed in git`);
           run('git', ['reset', '--hard', 'HEAD~1'], { cwd: dir });
+
+          fs.writeFileSync(path.join(dir, 'docs', 'urls.md'), 'See [docs](https://example.com/a) and `https://<host>/cb`.\n');
+          const urls = run('bash', ['scripts/check-freshness.sh'], { cwd: dir });
+          check(urls.status === 0, `${label}: check-freshness.sh must not treat https:// URLs as absolute local paths\n${urls.stdout}`);
+          fs.writeFileSync(path.join(dir, 'docs', 'win.md'), 'Built at C:\\Users\\me\\proj\n');
+          const win = run('bash', ['scripts/check-freshness.sh'], { cwd: dir });
+          check(win.status === 1, `${label}: check-freshness.sh must flag Windows drive paths`);
+          fs.rmSync(path.join(dir, 'docs', 'win.md'));
 
           fs.writeFileSync(path.join(dir, 'docs', 'broken.md'), '[x](nope.md) /Users/someone/project/\n');
           const bad = run('bash', ['scripts/check-freshness.sh'], { cwd: dir });
@@ -279,6 +310,8 @@ try {
   const obsoleteManifest = path.join(obsoleteDir, 'anr.yaml');
   let obsYaml = fs.readFileSync(obsoleteManifest, 'utf8');
   obsYaml = obsYaml.replace('managed_files:', 'managed_files:\n    - "scripts/deprecated-tool.sh"');
+  // Recorded fingerprint = the file is still exactly what anr wrote, so --prune may delete it.
+  obsYaml = obsYaml.replace('managed_hashes:', `managed_hashes:\n    scripts/deprecated-tool.sh: "${fileHash(customScript)}"`);
   fs.writeFileSync(obsoleteManifest, obsYaml);
 
   // Update without --prune: file must be detected as obsolete and preserved
@@ -361,6 +394,53 @@ try {
   fs.writeFileSync(strictManifestPath, validManifestRaw.replace('- "AGENTS.md"', '- "../../../etc/passwd"'));
   const test12d = run('node', [BIN, 'validate'], { cwd: strictTestDir });
   check(test12d.status !== 0, 'manifest with path traversal in managed_files must fail validation');
+
+  // 13. Update must never silently overwrite a file the user edited (skills are meant to be customized)
+  const editDir = path.join(cliTestDir, 'user-edit-target');
+  fs.mkdirSync(editDir, { recursive: true });
+  run('node', [BIN, 'init', editDir, '--runtime', 'claude-code', '--tier', 'standard', '--lang', 'en']);
+  const editedSkill = path.join(editDir, '.agents', 'skills', 'verify', 'SKILL.md');
+  fs.appendFileSync(editedSkill, '\n6. Project-specific step added by the user.\n');
+  const editUpdate = run('node', [BIN, 'update', editDir]);
+  check(editUpdate.status === 0, 'anr update with a user-edited skill should exit 0');
+  check(fs.readFileSync(editedSkill, 'utf8').includes('Project-specific step'), 'anr update must preserve a user-edited skill without --force');
+  check(fs.readFileSync(path.join(editDir, 'anr.yaml'), 'utf8').includes('sync_status: "partial"'), 'a preserved user edit must leave sync_status partial');
+  const editForce = run('node', [BIN, 'update', editDir, '--force']);
+  check(editForce.status === 0 && !fs.readFileSync(editedSkill, 'utf8').includes('Project-specific step'), 'anr update --force must replace a user-edited file');
+
+  // 14. A pristine file from an older template is updated without --force
+  const staleSkill = path.join(editDir, '.agents', 'skills', 'bug-fix', 'SKILL.md');
+  fs.writeFileSync(staleSkill, '---\nname: bug-fix\ndescription: Older template wording.\n---\n# Old\n');
+  const editManifest = path.join(editDir, 'anr.yaml');
+  fs.writeFileSync(editManifest, fs.readFileSync(editManifest, 'utf8')
+    .replace(/(\.agents\/skills\/bug-fix\/SKILL\.md: )"[0-9a-f]+"/, `$1"${fileHash(staleSkill)}"`));
+  const staleUpdate = run('node', [BIN, 'update', editDir]);
+  check(staleUpdate.status === 0 && !fs.readFileSync(staleSkill, 'utf8').includes('Older template wording'),
+    'anr update must refresh a file that is unmodified since the previous template version');
+
+  // 15. --prune must not delete obsolete files the user modified
+  const modScript = path.join(obsoleteDir, 'scripts', 'modified-tool.sh');
+  fs.writeFileSync(modScript, '#!/bin/bash\necho "original"\n');
+  let modYaml = fs.readFileSync(obsoleteManifest, 'utf8')
+    .replace('managed_files:', 'managed_files:\n    - "scripts/modified-tool.sh"')
+    .replace('managed_hashes:', `managed_hashes:\n    scripts/modified-tool.sh: "${fileHash(modScript)}"`);
+  fs.writeFileSync(obsoleteManifest, modYaml);
+  fs.appendFileSync(modScript, 'echo "user change"\n');
+  const pruneModified = run('node', [BIN, 'update', obsoleteDir, '--prune']);
+  check(pruneModified.status === 0 && fs.existsSync(modScript), 'anr update --prune must preserve an obsolete file the user modified');
+
+  // 16. Repeated updates must not duplicate hook entries in merged runtime configs
+  const hookDir = path.join(cliTestDir, 'hook-dup-target');
+  fs.mkdirSync(hookDir, { recursive: true });
+  run('node', [BIN, 'init', hookDir, '--runtime', 'claude-code', '--tier', 'full', '--lang', 'en']);
+  const hookSettings = path.join(hookDir, '.claude', 'settings.json');
+  const hs = JSON.parse(fs.readFileSync(hookSettings, 'utf8'));
+  hs.permissions.allow = ['Bash(npm test)'];
+  fs.writeFileSync(hookSettings, JSON.stringify(hs, null, 2));
+  for (let i = 0; i < 3; i++) run('node', [BIN, 'update', hookDir]);
+  const afterHooks = JSON.parse(fs.readFileSync(hookSettings, 'utf8'));
+  check(afterHooks.hooks.PreToolUse.length === 1, `repeated anr update must not duplicate hook entries (found ${afterHooks.hooks.PreToolUse.length})`);
+  check(afterHooks.permissions.allow.includes('Bash(npm test)'), 'repeated anr update must keep user permissions');
 } finally {
   fs.rmSync(tmpRoot, { recursive: true, force: true });
 }

@@ -53,8 +53,8 @@ CLI は、12 のテンプレートマトリックス（4 ランタイム × 3 �
 
 **ステップ 2: 複雑さのティア（階層）の選択**
 - `light`: 単純なスクリプト用の最小限のコンテキストファイル。
-- `standard`: デフォルト。本番サービス向けの完全なコンテキスト、契約、およびルールのアーキテクチャ。
-- `full`: エンタープライズグレード。standard に加え、パスガードレール（読み取り専用 / 追記のみのファイル。フックまたは CI で強制）とコンテキスト鮮度チェックを含みます。
+- `standard`: デフォルト。本番サービス向けの完全なコンテキスト、契約、およびルールのアーキテクチャ。受け入れ基準、タスク計画、rubric に基づく独立レビューを含みます。
+- `full`: 高成熟度のガードレール。standard に加え、パスガードレール（読み取り専用 / 追記のみのファイル。フックまたは CI で強制）、コンテキスト鮮度チェック、コンテキスト層の行動評価を含みます。
 
 *または、フラグで対話プロンプトをスキップできます:*
 ```bash
@@ -125,9 +125,9 @@ AI に何万語もの巨大なドキュメントを読ませてはいけませ�
 2. **ルール (The "Instructions & Constraints")**: *`AGENTS.md`, `CLAUDE.md`, `.cursor/rules/`*
 3. **契約 (The "How they connect")**: *`Protocols`, `Schemas`, `API Definitions`*
 4. **スキル (The "How to do a specific task")**: *`SKILL.md`*
-5. **ワークフロー (The "How to orchestrate")**: *`SOPs`*
+5. **ワークフロー (The "How to orchestrate")**: *`SOPs`, `Plans`*。受け入れ基準の定義から始まり、`docs/plans/` のバージョン管理されたタスク計画で次のセッションが続きから進める。
 6. **ツール (The "How to touch the world")**: *`MCP Servers`, `Deterministic CLI Scripts`*
-7. **検証 (The "Evidence")**: *`Tests`, `Validators`, `Hooks`*
+7. **検証と評価 (The "Evidence")**: *`Tests`, `Validators`, `Hooks`, `Review`, `Evals`*。まず決定的チェック（exit 0 まで完了ではない）。その後、コマンドでは判定できない部分（受け入れ基準、範囲、ドキュメントの正しさ）だけを**制約された LLM-as-a-judge** がレビューする：バージョン管理された rubric、独立したコンテキスト、`UNKNOWN` を許容し、失敗したチェックを覆す権限はない。行動評価はコンテキスト層そのものを検証する。
 8. **人間とエージェントの境界 (The "Trust barrier")**: *`MANUAL_TASKS.md`*
 
 ---

@@ -37,7 +37,8 @@ while IFS= read -r l; do fail "Broken link: $l"; done < "$TMP/broken"
 
 # 2. No absolute local paths — they break on every other machine and after a rename.
 # Detects file:///, Windows drive paths (C:\, D:/), UNC (\\server), /Volumes/, /Users/, /home/, /mnt/
-ABS='file:///|[a-zA-Z]:[/\\]|\\\\[a-zA-Z0-9_-]+[/\\]|/Volumes/|/Users/[^/ ]+/|/home/[^/ ]+/|/mnt/[^/ ]+/'
+# A drive letter must not follow another letter, or every https:// URL ("s:/") would match.
+ABS='file:///|(^|[^a-zA-Z])[a-zA-Z]:[/\\]|\\\\[a-zA-Z0-9_-]+[/\\]|/Volumes/|/Users/[^/ ]+/|/home/[^/ ]+/|/mnt/[^/ ]+/'
 while IFS= read -r f; do
   hit=$(grep -nE "$ABS" "$f" | head -1 | cut -c1-120)
   [ -n "$hit" ] && echo "$f: $hit"
@@ -83,7 +84,7 @@ if [ -f .agents/context-index.md ]; then
   while IFS= read -r p; do warn "context-index.md references missing path: $p"; done < "$TMP/stale"
 fi
 
-# 6. God files (philosophy §37): hand-written sources over 1000 lines.
+# 6. God files (philosophy §36): hand-written sources over 1000 lines.
 if git rev-parse --git-dir >/dev/null 2>&1; then
   git ls-files | grep -E '\.(swift|kt|java|ts|tsx|js|jsx|py|go|rs|rb|cs|dart)$' | grep -vE '(generated|\.gen\.|/migrations/|\.d\.ts$)' |
   while IFS= read -r f; do
@@ -92,6 +93,21 @@ if git rev-parse --git-dir >/dev/null 2>&1; then
     [ "$n" -gt 1000 ] && echo "$f ($n lines)"
   done > "$TMP/god"
   while IFS= read -r l; do warn "Large source file: $l"; done < "$TMP/god"
+fi
+
+# 7. Invariant coverage (Rule 10): each INV-<id> in docs/invariants/ should be named by at least one
+#    file outside docs/ (a test, usually). Informational only: a fresh scaffold has no tests yet.
+if [ -d docs/invariants ] && git rev-parse --git-dir >/dev/null 2>&1; then
+  ids=$(grep -rhoE 'INV-[A-Z0-9]+(-[0-9]+)?' docs/invariants 2>/dev/null | sort -u)
+  total=0; uncovered=""
+  for id in $ids; do
+    total=$((total+1))
+    git grep -q -F "$id" -- ':!docs/' ':!*.md' 2>/dev/null || git grep -q -F "${id//-/_}" -- ':!docs/' ':!*.md' 2>/dev/null || uncovered="$uncovered $id"
+  done
+  if [ "$total" -gt 0 ]; then
+    n=$(echo "$uncovered" | wc -w | tr -d ' ')
+    echo "ℹ️  Invariants: $((total-n))/$total referenced outside docs/ (tests).${uncovered:+ Not yet:$uncovered}"
+  fi
 fi
 
 echo "---"

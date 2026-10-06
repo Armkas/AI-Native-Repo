@@ -1,6 +1,6 @@
 # [Project Name] — AGENTS.md
 
-> Runtime-neutral entry point for every AI coding agent. Keep this file a **router** (<= 2048 bytes): it points to context, it does not hold it.
+> Runtime-neutral entry for every AI coding agent. A **router** (<= 2048 bytes): it points to context, it does not hold it.
 
 ## Verify before you claim "done"
 
@@ -13,9 +13,9 @@ bash scripts/check-freshness.sh   # AI context layer must not rot
 
 Full procedure: skill [`verify`](.agents/skills/verify/SKILL.md). If a command cannot run, say so explicitly.
 
-## Guardrails
+## Guardrails & evals
 
-Protected paths: [.agents/guardrails/protected-paths.txt](.agents/guardrails/protected-paths.txt), enforced by `scripts/guard-paths.sh`. A block is a stop sign — ask the human.
+[Protected paths](.agents/guardrails/protected-paths.txt) are enforced by `scripts/guard-paths.sh`; a block is a stop sign — ask the human. Never edit [evals/](evals/README.md) while being evaluated.
 
 ## Scope & status
 
@@ -31,9 +31,10 @@ Protected paths: [.agents/guardrails/protected-paths.txt](.agents/guardrails/pro
 4. How parts connect: [docs/contracts/](docs/contracts/backend_rpc.md)
 5. Why it is so / what must never break: [docs/adr/](docs/adr/README.md), [docs/invariants/](docs/invariants/business_invariants.md)
 6. Blast radius: [.agents/dependency-map.md](.agents/dependency-map.md)
-7. Only then: the `Interface`, then the implementation.
+7. Task intent: acceptance criteria, [docs/plans/](docs/plans/README.md)
+8. Only then: the `Interface`, then the implementation.
 
 ## Skills (load on demand)
 
-Canonical skills live in [.agents/skills/](.agents/skills/). Use the matching one instead of improvising:
-`feature-development` · `bug-fix` · `database-migration` · `api-contract-change` · `verify` · `doc-sync`
+Canonical skills in [.agents/skills/](.agents/skills/) — use the matching one, do not improvise:
+`feature-development` · `bug-fix` · `database-migration` · `api-contract-change` · `verify` · `review` · `doc-sync`

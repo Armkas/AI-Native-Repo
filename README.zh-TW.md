@@ -53,8 +53,8 @@ CLI 會互動式地要求你從我們的 12-模板矩陣（4 種運行時 × 3 �
 
 **步驟 2：選擇你的複雜度層級**
 - `light`: 用於簡單腳本或原型的最基本上下文文件（PROJECT_MAP + 核心規則）。
-- `standard`: 默認選項。適用於生產服務的完整上下文、契約和規則架構。
-- `full`: 高成熟度確定性護欄。在 standard 基礎上增加路徑護欄（唯讀 / 僅追加檔案，由鉤子或 CI 強制執行）與上下文新鮮度檢查腳本。
+- `standard`: 默認選項。適用於生產服務的完整上下文、契約和規則架構；並提供驗收標準、任務計劃與基於 rubric 的獨立評審。
+- `full`: 高成熟度確定性護欄。在 standard 基礎上增加路徑護欄（唯讀 / 僅追加檔案，由鉤子或 CI 強制執行）、上下文新鮮度檢查腳本，以及針對上下文層的行為評測。
 
 *或者，你可以通過參數跳過提示：*
 ```bash
@@ -138,16 +138,16 @@ npx ai-native-repo init . --runtime claude-code --tier full --lang zh-CN   # en 
 可重用的原子能力（例如「如何在這個代碼庫中生成數據庫遷移」）。
 
 ### 5. 工作流 (Workflows - "How to orchestrate")
-*`SOPs`*
-多步程序（例如「計劃 -> 檢查不變量 -> 實現 -> 測試 -> 驗證 -> 更新文檔」）。
+*`SOPs`, `Plans`*
+多步程序（例如「定義驗收標準 -> 檢查不變量 -> 實現 -> 測試 -> 驗證 -> 評審 -> 更新文檔」），以及放在 `docs/plans/` 中的版本化任務計劃，讓下一次會話接著做，而不是從頭再來。
 
 ### 6. 工具 (Tools - "How to touch the world")
 *`MCP Servers`, `Deterministic CLI Scripts`*
 代理可以用來讀取數據庫、獲取日誌或編譯代碼的結構化能力。
 
-### 7. 驗證 (Verification - "Evidence")
-*`Tests`, `Validators`, `Hooks`*
-自動化的閉環。代碼驗證 + 代理行為驗證。直到驗證腳本返回退出碼 0，代理的工作才算完成。
+### 7. 驗證與評測 (Verification & Evaluation - "Evidence")
+*`Tests`, `Validators`, `Hooks`, `Review`, `Evals`*
+按可靠性排序的自動化閉環。確定性檢查優先：直到它們返回退出碼 0，代理的工作才算完成。之後才由**受約束的 LLM-as-a-judge** 評審命令無法判定的部分——是否滿足驗收標準、是否越界、文檔是否仍然真實——它使用版本化的 rubric、獨立的上下文、允許回答 `UNKNOWN`，並且無權推翻失敗的檢查。行為評測則檢驗上下文層本身是否真的引導代理做出正確行為。
 
 ### 8. 人機邊界 (Human / Agent Boundary - "Trust barrier")
 *`MANUAL_TASKS.md`*

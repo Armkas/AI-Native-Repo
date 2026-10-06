@@ -53,8 +53,8 @@ Die CLI fordert dich interaktiv auf, aus unserer 12-Vorlagen-Matrix (4 Runtimes 
 
 **Schritt 2: Wähle deinen Komplexitätsgrad (Tier)**
 - `light`: Die absolut minimalen Kontextdateien für einfache Skripte.
-- `standard`: Der Standard. Vollständige Kontext-, Vertrags- und Regelarchitektur.
-- `full`: Enterprise-Klasse. Standard plus Pfad-Guardrails (schreibgeschützte / nur-anhängen Dateien, durchgesetzt per Hook oder CI) und ein Kontext-Aktualitätscheck.
+- `standard`: Der Standard. Vollständige Kontext-, Vertrags- und Regelarchitektur, mit Abnahmekriterien, Aufgabenplänen und einem unabhängigen, rubrikbasierten Review.
+- `full`: Guardrails hoher Reife. Standard plus Pfad-Guardrails (schreibgeschützte / nur-anhängen Dateien, durchgesetzt per Hook oder CI), ein Kontext-Aktualitätscheck und Verhaltens-Evals der Kontextschicht.
 
 *Alternativ kannst du die Eingabeaufforderungen mit Parametern überspringen:*
 ```bash
@@ -123,9 +123,9 @@ Dieser Standard erhebt das Repository von einem "Buch zum Lesen für die KI" zu 
 2. **Regeln (Die "Anweisungen & Einschränkungen")**: *`AGENTS.md`, `CLAUDE.md`, `.cursor/rules/`*
 3. **Verträge (Das "Wie sie sich verbinden")**: *`Protocols`, `Schemas`, `API Definitions`*
 4. **Fähigkeiten (Das "Wie man eine spezifische Aufgabe erledigt")**: *`SKILL.md`*
-5. **Workflows (Das "Wie man orchestriert")**: *`SOPs`*
+5. **Workflows (Das "Wie man orchestriert")**: *`SOPs`, `Plans`*. Beginnen mit Abnahmekriterien; versionierte Aufgabenpläne in `docs/plans/` lassen die nächste Sitzung weitermachen statt neu anzufangen.
 6. **Werkzeuge (Das "Wie man die Welt berührt")**: *`MCP Servers`, `Deterministic CLI Scripts`*
-7. **Verifizierung (Der "Beweis")**: *`Tests`, `Validators`, `Hooks`*. Die Arbeit eines Agenten ist nicht beendet, bis das Validator-Skript 0 zurückgibt.
+7. **Verifizierung & Evaluierung (Der "Beweis")**: *`Tests`, `Validators`, `Hooks`, `Review`, `Evals`*. Zuerst deterministische Prüfungen: Die Arbeit eines Agenten ist nicht beendet, bis sie 0 zurückgeben. Erst danach bewertet ein **begrenzter LLM-as-a-judge**, was kein Befehl entscheiden kann — Abnahmekriterien erfüllt, Umfang eingehalten, Doku noch wahr — mit versionierter Rubrik, unabhängigem Kontext, `UNKNOWN` als gültiger Antwort und ohne Macht, eine fehlgeschlagene Prüfung aufzuheben. Verhaltens-Evals prüfen, ob die Kontextschicht selbst Agenten zum richtigen Verhalten führt.
 8. **Mensch / Agent-Grenze (Die "Vertrauensbarriere")**: *`MANUAL_TASKS.md`*
 
 ---

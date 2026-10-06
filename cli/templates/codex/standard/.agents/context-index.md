@@ -42,6 +42,7 @@ Agents must inspect these contracts first before reading implementation files:
 | **Golden Feature** | [docs/architecture/golden_feature_template.md](../docs/architecture/golden_feature_template.md) | Canonical layout for new features |
 | **Invariants** | [docs/invariants/business_invariants.md](../docs/invariants/business_invariants.md) | Inviolable business rules and guardrails |
 | **ADR** | [docs/adr/README.md](../docs/adr/README.md) | Architectural Decision Records (Why) |
+| **Plans** | [docs/plans/README.md](../docs/plans/README.md) | Active task plans: acceptance criteria and decision log |
 | **Dependency Map** | [dependency-map.md](dependency-map.md) | Dependency graph and impact assessment |
 
 ---
@@ -57,4 +58,5 @@ Canonical `SKILL.md` files, loaded on demand by the runtime (or read directly wh
 | [database-migration](skills/database-migration/SKILL.md) | Any schema change |
 | [api-contract-change](skills/api-contract-change/SKILL.md) | Changing request/response shapes or error codes |
 | [verify](skills/verify/SKILL.md) | Closed-loop verification before claiming completion |
+| [review](skills/review/SKILL.md) | Independent rubric-based review after `verify` passes (bounded LLM-as-a-judge) |
 | [doc-sync](skills/doc-sync/SKILL.md) | Keeping `docs/` and `.agents/` in sync with the code |

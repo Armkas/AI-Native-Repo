@@ -63,8 +63,15 @@ Two limits apply to every runtime:
 
 - **Hooks only see the agent's own file tools.** An edit made through a shell command (`sed -i`, `>`)
   bypasses them, so the CI step (`guard-paths.sh ci <base>`) remains the layer that cannot be bypassed.
-- **Clone ≠ Trust** (Rule 04). Project-level hooks run only after the human trusts them: Claude Code's
+- **Clone ≠ Trust** (Rule 06). Project-level hooks run only after the human trusts them: Claude Code's
   workspace trust dialog, Codex's trusted-project check (`/hooks`), Gemini CLI's hook fingerprinting.
+
+### Independent Review and Evals
+
+The `review` skill (bounded LLM-as-a-judge, [Rule 13](repository-standard.md#rule-13-normative--verification-hierarchy--bounded-judges)) asks for a context independent of the one that wrote the change. Use the
+runtime's subagent mechanism from the table above where it has one; otherwise a new session works. Behavioral
+evals ([Rule 16](repository-standard.md#rule-16-heuristic-normative-in-full--behavioral-evals)) run the agent on a scenario in a separate git worktree, through the runtime's
+non-interactive mode or a fresh session; grading (`scripts/eval-check.sh`) is runtime-neutral.
 
 ### Adding New Adapters
 If your team uses a different Agent Runtime (e.g., Windsurf, Trae, GitHub Copilot), you do NOT need to reinvent the AI-Native architecture. You simply provide a new column in this table mapping how that tool implements entry points, skills, hooks, and scopes.

@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const readline = require('readline');
 const { parseYAML, stringifyYAML, validateManifest, parseSkillFrontmatter } = require('./yaml.js');
 
@@ -10,6 +11,13 @@ const TIERS = catalog.tiers;
 const LANGS = catalog.languages;
 const CLI_VERSION = require('../package.json').version;
 const VARIANT_RE = /^(.+)\.(zh-CN|ja)(\.[^.]+)$/;
+
+// Content fingerprint recorded in anr.yaml (template.managed_hashes). A file whose current content still
+// matches the recorded fingerprint is pristine template output and may be updated or pruned safely;
+// anything else has been edited by the user and is never touched without --force.
+function fileHash(p) {
+  return crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex').slice(0, 16);
+}
 
 function prompt(question) {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -291,11 +299,11 @@ async function initCommand(args) {
 
   // Preflight: Collect all file actions to prevent partial writes
   const actions = collectFileActions(templateDir, targetDir, lang, isForce);
-  const managedFiles = actions.map(a => a.relPath);
+  const managedHashes = Object.fromEntries(actions.map(a => [a.relPath, a.hash]));
 
   // Manifest action
   const manifestPath = path.join(targetDir, 'anr.yaml');
-  const manifestContent = generateConsumerManifest(runtime, tier, lang, managedFiles);
+  const manifestContent = generateConsumerManifest(runtime, tier, lang, managedHashes);
   if (fs.existsSync(manifestPath)) {
     const existing = fs.readFileSync(manifestPath, 'utf8');
     if (existing === manifestContent) {
@@ -355,7 +363,8 @@ async function initCommand(args) {
   }
 }
 
-function generateConsumerManifest(runtime, tier, lang, managedFiles = []) {
+function generateConsumerManifest(runtime, tier, lang, managedHashes = {}) {
+  const managedFiles = Object.keys(managedHashes);
   const runtimeEntry = catalog.runtimes[runtime].entrypoint || 'AGENTS.md';
   const manifestObj = {
     schema_version: '2.0',
@@ -377,7 +386,8 @@ function generateConsumerManifest(runtime, tier, lang, managedFiles = []) {
     template: {
       version: CLI_VERSION,
       sync_status: 'synced',
-      managed_files: managedFiles.length > 0 ? managedFiles : undefined
+      managed_files: managedFiles.length > 0 ? managedFiles : undefined,
+      managed_hashes: managedFiles.length > 0 ? managedHashes : undefined
     }
   };
   return stringifyYAML(manifestObj);
@@ -417,17 +427,16 @@ function collectFileActions(srcDir, destDir, lang, isForce, relBase = '') {
     const srcPath = path.join(srcDir, srcName);
     const destPath = path.join(destDir, outName);
     const relPath = path.join(relBase, outName);
+    const hash = fileHash(srcPath);
 
     if (fs.existsSync(destPath)) {
-      const srcContent = fs.readFileSync(srcPath, 'utf8');
-      const destContent = fs.readFileSync(destPath, 'utf8');
-      if (srcContent === destContent) {
-        actions.push({ type: 'SKIP', srcPath, destPath, relPath, reason: 'identical' });
+      if (fileHash(destPath) === hash) {
+        actions.push({ type: 'SKIP', srcPath, destPath, relPath, hash, reason: 'identical' });
       } else {
-        actions.push({ type: isForce ? 'OVERWRITE' : 'CONFLICT', srcPath, destPath, relPath });
+        actions.push({ type: isForce ? 'OVERWRITE' : 'CONFLICT', srcPath, destPath, relPath, hash });
       }
     } else {
-      actions.push({ type: 'CREATE', srcPath, destPath, relPath });
+      actions.push({ type: 'CREATE', srcPath, destPath, relPath, hash });
     }
   }
 
@@ -550,7 +559,9 @@ function mergeJsonConfigs(existingPath, templatePath) {
         if (!merged.hooks[k]) {
           merged.hooks[k] = v;
         } else if (Array.isArray(v) && Array.isArray(merged.hooks[k])) {
-          merged.hooks[k] = Array.from(new Set([...merged.hooks[k], ...v]));
+          // Hook entries are objects: compare by value, or every update would append another copy.
+          const present = new Set(merged.hooks[k].map(h => JSON.stringify(h)));
+          merged.hooks[k] = [...merged.hooks[k], ...v.filter(h => !present.has(JSON.stringify(h)))];
         }
       }
     }
@@ -559,19 +570,12 @@ function mergeJsonConfigs(existingPath, templatePath) {
   return JSON.stringify(merged, null, 2) + '\n';
 }
 
-function classifyOwnership(relPath) {
-  if (relPath === '.claude/settings.json' ||
-      relPath === '.cursor/hooks.json' ||
-      relPath === '.codex/hooks.json' ||
-      relPath === '.gemini/settings.json') {
-    return 'merge-json';
-  }
-  if (relPath.startsWith('.agents/skills/') ||
-      relPath.startsWith('scripts/guard-paths.sh') ||
-      relPath.startsWith('scripts/check-freshness.sh')) {
-    return 'managed';
-  }
-  return 'user-domain';
+// Runtime JSON configs are merged key by key. Every other file is judged by its content fingerprint.
+function isMergeJson(relPath) {
+  return relPath === '.claude/settings.json' ||
+    relPath === '.cursor/hooks.json' ||
+    relPath === '.codex/hooks.json' ||
+    relPath === '.gemini/settings.json';
 }
 
 async function updateCommand(args) {
@@ -627,6 +631,21 @@ async function updateCommand(args) {
   const prevManagedFiles = (manifestObj.template && Array.isArray(manifestObj.template.managed_files))
     ? manifestObj.template.managed_files
     : [];
+  const prevHashes = (manifestObj.template && manifestObj.template.managed_hashes &&
+    typeof manifestObj.template.managed_hashes === 'object' && !Array.isArray(manifestObj.template.managed_hashes))
+    ? manifestObj.template.managed_hashes
+    : {};
+  // Unmodified since anr last wrote it? Only then may the file be replaced or pruned without --force.
+  const isPristine = rel => {
+    const destPath = path.join(targetDir, rel);
+    return typeof prevHashes[rel] === 'string' && fs.existsSync(destPath) && fileHash(destPath) === prevHashes[rel];
+  };
+  const newHashes = {};
+
+  if (Object.keys(prevHashes).length === 0 && prevManagedFiles.length > 0) {
+    console.log(`  Note     : anr.yaml has no file fingerprints (written by an older anr). Files that differ from`);
+    console.log(`             the template are treated as user-modified and preserved; pass --force to replace them.`);
+  }
 
   let obsoleteDetected = 0;
   let pruned = 0;
@@ -637,16 +656,14 @@ async function updateCommand(args) {
       if (fs.existsSync(destPath)) {
         obsoleteDetected++;
         if (isPrune) {
-          const ownership = classifyOwnership(prevRel);
-          const isManagedInfra = ownership === 'managed' || prevRel.startsWith('scripts/') || prevRel.startsWith('.agents/');
-          if (isManagedInfra || isForce) {
+          if (isPristine(prevRel) || isForce) {
             console.log(`  - Prune  : ${prevRel} (obsolete in current template)`);
             if (!isDryRun) {
               fs.unlinkSync(destPath);
             }
             pruned++;
           } else {
-            console.log(`  ! Obsolete (user-owned/modified, preserved): ${prevRel}`);
+            console.log(`  ! Obsolete (modified since install, preserved; pass --force to delete): ${prevRel}`);
           }
         } else {
           console.log(`  ⚠ Obsolete: ${prevRel} (no longer in template; pass --prune to clean up)`);
@@ -663,11 +680,10 @@ async function updateCommand(args) {
 
   for (const act of actions) {
     if (act.type === 'SKIP') {
+      newHashes[act.relPath] = act.hash;
       skipped++;
       continue;
     }
-
-    const ownership = classifyOwnership(act.relPath);
 
     if (act.type === 'CREATE') {
       console.log(`  + Add    : ${act.relPath}`);
@@ -676,9 +692,10 @@ async function updateCommand(args) {
         fs.copyFileSync(act.srcPath, act.destPath);
         fs.chmodSync(act.destPath, fs.statSync(act.srcPath).mode);
       }
+      newHashes[act.relPath] = act.hash;
       added++;
     } else if (act.type === 'OVERWRITE' || act.type === 'CONFLICT') {
-      if (ownership === 'merge-json') {
+      if (isMergeJson(act.relPath)) {
         console.log(`  ~ Merge  : ${act.relPath} (preserving user custom rules & keys)`);
         if (!isDryRun) {
           try {
@@ -692,15 +709,17 @@ async function updateCommand(args) {
           }
         }
         merged++;
-      } else if (ownership === 'managed' || isForce) {
+      } else if (isPristine(act.relPath) || isForce) {
         console.log(`  ~ Update : ${act.relPath}`);
         if (!isDryRun) {
           fs.copyFileSync(act.srcPath, act.destPath);
           fs.chmodSync(act.destPath, fs.statSync(act.srcPath).mode);
         }
+        newHashes[act.relPath] = act.hash;
         updated++;
       } else {
-        console.log(`  ! Review : ${act.relPath} (user-owned, preserved; pass --force to overwrite)`);
+        console.log(`  ! Review : ${act.relPath} (modified since install, preserved; pass --force to overwrite)`);
+        if (prevHashes[act.relPath]) newHashes[act.relPath] = prevHashes[act.relPath];
         review++;
       }
     }
@@ -710,11 +729,15 @@ async function updateCommand(args) {
 
   const unprunedObsolete = prevManagedFiles.filter(f => !newManagedSet.has(f) && fs.existsSync(path.join(targetDir, f)));
   const isFullySynced = review === 0 && unprunedObsolete.length === 0;
+  for (const f of unprunedObsolete) {
+    if (prevHashes[f]) newHashes[f] = prevHashes[f];
+  }
 
-  // Update manifest version, managed files inventory, and sync status
+  // Update manifest version, managed files inventory, fingerprints and sync status
   if (!isDryRun) {
     manifestObj.template = manifestObj.template || {};
     manifestObj.template.managed_files = Array.from(new Set([...newManagedSet, ...unprunedObsolete]));
+    manifestObj.template.managed_hashes = newHashes;
     if (isFullySynced) {
       manifestObj.template.version = CLI_VERSION;
       manifestObj.template.sync_status = 'synced';

@@ -14,7 +14,8 @@ Docs are part of the code. Stale docs mislead the next agent more than missing d
 | Database schema | a **new** migration file, `docs/contracts/database_schema.md` |
 | Added a feature module | `docs/PROJECT_MAP.md`, `docs/domains/`, `.agents/context-index.md` |
 | A significant technical choice | new ADR in `docs/adr/` + its `README.md` index |
-| A rule that must never regress | `docs/invariants/` |
+| A rule that must never regress | `docs/invariants/` with a new `INV-` ID, and a test that names the ID |
+| Finished a planned task | its plan in `docs/plans/` (status `done`, decision log) |
 | Something only a human can do | `MANUAL_TASKS.md` with a `[ ]` checkbox |
 
 Rules:

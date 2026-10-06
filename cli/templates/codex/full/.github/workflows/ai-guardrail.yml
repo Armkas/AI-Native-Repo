@@ -3,6 +3,8 @@ name: AI-Native Guardrails
 on:
   push:
   pull_request:
+    # labeled / unlabeled: re-run when a human adds or removes the guardrail-override label.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 permissions:
   contents: read
@@ -18,6 +20,8 @@ jobs:
       - name: Verify AI Context Freshness
         run: bash scripts/check-freshness.sh --strict
 
+      # Runtime hooks only see the agent's own file tools; this step also catches shell edits.
+      # A human can approve a deliberate change to a protected path with the `guardrail-override` label.
       - name: Enforce Path Guardrails (PR commits)
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'guardrail-override')
         run: bash scripts/guard-paths.sh ci origin/${{ github.base_ref }}

@@ -1,14 +1,16 @@
 # 🍏 iOS AGENTS.md
 
-## Runtime Architecture
-This directory is the **runtime plane**. Keep Feature + MVVM / Clean. The AI Context Layer lives in root `AGENTS.md` and `docs/`.
+> Stack this file with the root `AGENTS.md` when working under `ios/`.
 
-## Local Rules
-Code under this directory must adhere to:
+## Runtime architecture
 
-1. **Architectural Pattern**: Feature modules; MVVM / Clean at the runtime layer (View → ViewModel → UseCase / Service → Repository).
-2. **Dependency Inversion**: Cross-module dependencies go through `Protocol` in `Interface/`. One real capability → one protocol, not a stack of unused adapters.
-3. **UI Framework**: SwiftUI. Avoid UIKit unless there is no alternative.
-4. **Concurrency Model**: Swift Concurrency (`async/await`, `Task`, `actor`). No legacy completion handlers or GCD.
+This directory is the **runtime plane**: Feature modules with MVVM / Clean inside each feature.
+The AI Context Layer lives in the root `AGENTS.md` and `docs/`.
 
-> When working in `ios/`, stack root `AGENTS.md` with this file.
+## Local rules
+
+1. **Feature layout**: `Features/<Name>/Interface/` (protocols and domain errors) → `Application/` (orchestration and policies) → views. Read `Interface/` first.
+2. **Dependency inversion at real boundaries**: cross-module dependencies and external engines go through a protocol in `Interface/`. One real capability → one protocol, not a stack of unused adapters.
+3. **UI**: SwiftUI. UIKit only when there is no alternative.
+4. **Concurrency**: Swift Concurrency (`async/await`, `Task`, `actor`). No completion handlers or GCD in new code.
+5. **Tests**: `Tests/<Feature>Tests/`. A test that protects an invariant carries its ID in the name (`test_INV_VOICE_002_…`).

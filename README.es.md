@@ -53,8 +53,8 @@ La CLI te pedirá interactivamente que elijas entre nuestra matriz de 12 plantil
 
 **Paso 2: Elige tu nivel de complejidad**
 - `light`: Los archivos de contexto mínimos (PROJECT_MAP + reglas principales) para scripts simples o prototipos.
-- `standard`: El predeterminado. Arquitectura completa de Contexto, Contratos y Reglas para servicios en producción.
-- `full`: Nivel empresarial. Standard más barreras de rutas (archivos de solo lectura / solo anexar, aplicadas con hooks o CI) y un verificador de frescura del contexto.
+- `standard`: El predeterminado. Arquitectura completa de Contexto, Contratos y Reglas para servicios en producción, con criterios de aceptación, planes de tarea y una revisión independiente basada en rúbrica.
+- `full`: Barreras de alta madurez. Standard más barreras de rutas (archivos de solo lectura / solo anexar, aplicadas con hooks o CI), un verificador de frescura del contexto y evaluaciones de comportamiento de la capa de contexto.
 
 *Alternativamente, puedes omitir las preguntas interactivas:*
 ```bash
@@ -138,16 +138,16 @@ Límites explícitos entre componentes. Los agentes de IA dependen de interfaces
 Capacidades atómicas reutilizables.
 
 ### 5. Flujos de trabajo (El "Cómo orquestar")
-*`SOPs`*
-Procedimientos de múltiples pasos (ej. "Plan -> Verificar -> Implementar -> Probar -> Actualizar Documentos").
+*`SOPs`, `Plans`*
+Procedimientos de múltiples pasos (ej. "Definir criterios de aceptación -> Verificar invariantes -> Implementar -> Probar -> Verificar -> Revisar -> Actualizar documentos"), más planes de tarea versionados en `docs/plans/` para que la siguiente sesión continúe en lugar de empezar de cero.
 
 ### 6. Herramientas (El "Cómo tocar el mundo")
 *`MCP Servers`, `Scripts CLI deterministas`*
 Capacidades estructuradas que el agente puede usar para leer bases de datos, compilar código, etc.
 
-### 7. Verificación (La "Evidencia")
-*`Tests`, `Validators`, `Hooks`*
-El cierre automático del ciclo. El trabajo de un agente no termina hasta que el script validador devuelve el código 0.
+### 7. Verificación y evaluación (La "Evidencia")
+*`Tests`, `Validators`, `Hooks`, `Review`, `Evals`*
+El cierre automático del ciclo, ordenado por fiabilidad. Primero las comprobaciones deterministas: el trabajo de un agente no termina hasta que devuelven el código 0. Solo después, un **LLM-as-a-judge acotado** revisa lo que ningún comando puede decidir —criterios de aceptación cumplidos, alcance respetado, documentación aún veraz— con una rúbrica versionada, un contexto independiente, `UNKNOWN` como respuesta válida y sin poder para anular una comprobación fallida. Las evaluaciones de comportamiento verifican que la propia capa de contexto guíe a los agentes hacia el comportamiento correcto.
 
 ### 8. Límite Humano/Agente (La "Barrera de confianza")
 *`MANUAL_TASKS.md`*

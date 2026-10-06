@@ -1,5 +1,6 @@
 ---
-description: Architecture rules for business logic
+description: Invariants for Swift business logic
 globs: ios/**/*.swift
 ---
-All business logic must conform to the domain invariants described in `docs/domains/` (see the *Strong Constraints* section of each domain).
+Business logic under `ios/` must keep the invariants in `docs/invariants/voice_invariants.md` (INV-VOICE-…).
+Changing behavior an invariant covers means changing its `test_INV_…` test in the same commit — never only the code.

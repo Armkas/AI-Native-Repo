@@ -21,7 +21,10 @@ docs/
 ├── adr/                        # 5. Architecture Decision Records (ADRs)
 │   ├── README.md               #    ADR index table
 │   └── ADR-000-template.md     #    Standard ADR template
-└── domains/                    # 6. Business vertical domain knowledge
+├── plans/                      # 6. Versioned task plans (intent of one task)
+│   ├── README.md               #    When to write a plan, lifecycle, active plans
+│   └── plan-template.md        #    Goal, acceptance criteria, steps, decision log
+└── domains/                    # 7. Business vertical domain knowledge
     ├── README.md               #    Domain index
     ├── domain-template.md      #    Domain knowledge template
     └── auth.md                 #    Example domain (Authentication)

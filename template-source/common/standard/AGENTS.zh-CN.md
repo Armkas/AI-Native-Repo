@@ -26,9 +26,10 @@
 4. 组件如何连接：[docs/contracts/](docs/contracts/backend_rpc.md)
 5. 为什么这样 / 什么绝不能破坏：[docs/adr/](docs/adr/README.md)、[docs/invariants/](docs/invariants/business_invariants.md)
 6. 影响半径：[.agents/dependency-map.md](.agents/dependency-map.md)
-7. 最后才是：`Interface`，然后是实现。
+7. 任务意图：验收标准，[docs/plans/](docs/plans/README.md)
+8. 最后才是：`Interface`，然后是实现。
 
 ## 技能（按需加载）
 
 规范技能统一存放在 [.agents/skills/](.agents/skills/)。遇到匹配的任务请使用对应技能，不要即兴发挥：
-`feature-development` · `bug-fix` · `database-migration` · `api-contract-change` · `verify` · `doc-sync`
+`feature-development` · `bug-fix` · `database-migration` · `api-contract-change` · `verify` · `review` · `doc-sync`

@@ -1,16 +1,22 @@
 # DOMAIN: Voice
 
 ## Responsibilities
-Responsible for all capabilities related to voice recording, recognition, and synthesis. It is the core of the app's voice interaction with users.
 
-## Key Workflows
-- Record -> Speech-to-Text (STT) -> Intent Recognition (can be delegated to Navigation)
+Recording, speech-to-text and the continuous-listening mode. It is the core of the app's voice interaction.
+It does **not** decide what a transcript means: intent handling belongs to the feature that consumes the text.
 
-## Strong Constraints (Invariants)
-- **Silence Detection**: If there is no voice input for 20 consecutive seconds, automatically exit continuous dialogue mode.
-- **Fallback Strategy**: When the network fails, it must fall back to local STT for basic recognition.
-- **Persistence**: It is strictly forbidden to permanently save user's raw audio files locally. They are only allowed in temporary directories and must be deleted immediately after processing.
+## Key workflow
+
+Record → transcribe (remote provider, on-device fallback) → hand the transcript to the caller → delete the recording.
+
+## Rules
+
+The rules that must never break live in [voice_invariants.md](../invariants/voice_invariants.md):
+INV-VOICE-001 (20 s silence ends continuous mode), INV-VOICE-002 (on-device fallback), INV-VOICE-003 (no raw audio kept).
+Why the fallback is on-device rather than a retry: [ADR-001](../adr/ADR-001-local-stt-fallback.md).
 
 ## Mappings
-- **Code Implementation Location**: `ios/Features/Voice/`
-- **Main Protocol**: `VoiceServiceProtocol`
+
+- **Interface**: `ios/Features/Voice/Interface/VoiceServiceProtocol.swift` (`VoiceServiceProtocol`, `SpeechRecognizer`, `VoiceError`)
+- **Implementation**: `ios/Features/Voice/Application/` (`VoiceService`, `ContinuousListeningPolicy`)
+- **Tests**: `ios/Tests/VoiceTests/VoiceServiceTests.swift`

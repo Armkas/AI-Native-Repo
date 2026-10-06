@@ -24,6 +24,7 @@
 │   ├── contracts/          # API RPC 与数据库契约
 │   ├── invariants/         # 业务不变式与安全红线
 │   ├── adr/                # 架构决策记录
+│   ├── plans/              # 版本化任务计划：目标、验收标准、决策日志
 │   └── domains/            # 业务领域垂直知识
 │
 └── [src / apps / ...]  # 代码实现运行时层 (Software Runtime Architecture)

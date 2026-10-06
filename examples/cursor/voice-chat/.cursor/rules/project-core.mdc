@@ -1,7 +1,7 @@
 ---
-description: Global project rules
-globs: *
+description: Project router — always applied
 alwaysApply: true
 ---
-Follow the AI-Native Repository Standard.
-Check `docs/PROJECT_MAP.md` for context.
+- Read and obey `AGENTS.md` at the repository root before writing code. It is the single source of rules; this file only routes to it.
+- Navigation: `AGENTS.md` → `docs/PROJECT_MAP.md` → the domain, invariant or ADR you need.
+- Skills: Cursor discovers `.agents/skills/<name>/SKILL.md` natively; do not copy them into `.cursor/`.

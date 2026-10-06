@@ -53,8 +53,8 @@ A CLI pedirá interativamente que você escolha nossa matriz de 12 modelos (4 Ru
 
 **Etapa 2: Escolha o seu nível de complexidade (Tier)**
 - `light`: Arquivos de contexto mínimos para scripts simples ou protótipos.
-- `standard`: O padrão. Arquitetura completa para serviços em produção.
-- `full`: Nível empresarial. Standard mais proteções de caminhos (arquivos somente leitura / somente acréscimo, aplicadas por hooks ou CI) e um verificador de atualidade do contexto.
+- `standard`: O padrão. Arquitetura completa para serviços em produção, com critérios de aceitação, planos de tarefa e uma revisão independente baseada em rubrica.
+- `full`: Proteções de alta maturidade. Standard mais proteções de caminhos (arquivos somente leitura / somente acréscimo, aplicadas por hooks ou CI), um verificador de atualidade do contexto e avaliações comportamentais da camada de contexto.
 
 *Alternativamente, pule os prompts com sinalizadores:*
 ```bash
@@ -123,9 +123,9 @@ Este repositório já oferece templates de primeira classe para quatro **Runtime
 2. **Regras (As "Instruções e Restrições")**: *`AGENTS.md`, `CLAUDE.md`, `.cursor/rules/`*
 3. **Contratos (O "Como se conectam")**: *`Protocols`, `Schemas`, `API Definitions`*
 4. **Habilidades (O "Como fazer uma tarefa específica")**: *`SKILL.md`*
-5. **Workflows (O "Como orquestrar")**: *`SOPs`*
+5. **Workflows (O "Como orquestrar")**: *`SOPs`, `Plans`*. Começam por critérios de aceitação; planos de tarefa versionados em `docs/plans/` deixam a próxima sessão continuar em vez de recomeçar.
 6. **Ferramentas (O "Como tocar o mundo")**: *`MCP Servers`, `Scripts CLI`*
-7. **Verificação (A "Evidência")**: *`Tests`, `Validators`, `Hooks`*
+7. **Verificação e avaliação (A "Evidência")**: *`Tests`, `Validators`, `Hooks`, `Review`, `Evals`*. Primeiro as verificações determinísticas (sem exit 0 não está pronto). Só depois um **LLM-as-a-judge delimitado** avalia o que nenhum comando decide — critérios de aceitação atendidos, escopo respeitado, documentação ainda verdadeira — com rubrica versionada, contexto independente, `UNKNOWN` como resposta válida e sem poder de anular uma verificação que falhou. Avaliações comportamentais verificam a própria camada de contexto.
 8. **Limite Humano / Agente (A "Barreira de confiança")**: *`MANUAL_TASKS.md`*
 
 ---

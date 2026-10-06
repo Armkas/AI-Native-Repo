@@ -112,15 +112,46 @@ done < <(find template-source examples -name '*.json' -not -path '*/node_modules
 
 # 3. End-to-end scaffold tests (links, skills, guardrails for every runtime × tier × language)
 echo "--- Scaffold Tests ---"
-if node cli/tests/test.js > /tmp/anr-cli-test.log 2>&1; then
-    echo "✅ PASS: $(tail -1 /tmp/anr-cli-test.log)"
+TEST_LOG=$(mktemp)
+if node cli/tests/test.js > "$TEST_LOG" 2>&1; then
+    echo "✅ PASS: $(tail -1 "$TEST_LOG")"
 else
-    cat /tmp/anr-cli-test.log
+    cat "$TEST_LOG"
     echo "❌ FAIL: CLI scaffold tests failed."
     FAILS=$((FAILS+1))
 fi
 
-# 4. Drift & Stale Path Checks
+# 4. The reference repository follows its own standard (Rule 01 router budget, Rule 07 boundaries, links)
+echo "--- Self-Conformance ---"
+for f in AGENTS.md examples/*/voice-chat/AGENTS.md; do
+    size=$(wc -c < "$f" | tr -d ' ')
+    if [ "$size" -le 2048 ]; then echo "✅ PASS: $f is $size bytes (<= 2048)."; else echo "❌ FAIL: $f is $size bytes (> 2048, Rule 01)."; FAILS=$((FAILS+1)); fi
+done
+for f in MANUAL_TASKS.md examples/*/voice-chat/MANUAL_TASKS.md; do
+    if grep -q '\[Autonomous\]' "$f" && grep -q '\[Approval Required\]' "$f" && grep -q '\[Manual Only\]' "$f"; then
+        echo "✅ PASS: $f defines the three permission levels."
+    else
+        echo "❌ FAIL: $f must define [Autonomous] / [Approval Required] / [Manual Only] (Rule 07)."; FAILS=$((FAILS+1))
+    fi
+done
+if [ "$(grep -c '^## Rule' spec/repository-standard.md)" = "$(grep -c '^## 规则' spec/repository-standard.zh-CN.md)" ]; then
+    echo "✅ PASS: EN and ZH standards have the same number of rules."
+else
+    echo "❌ FAIL: spec/repository-standard.md and .zh-CN.md differ in rule count."; FAILS=$((FAILS+1))
+fi
+PHILO_NUMS=$(for f in spec/philosophy.md spec/philosophy.zh-CN.md spec/philosophy.ja.md; do grep -oE '^## [0-9]+(–[0-9]+)?(\.[0-9]+)?' "$f" | tr '\n' ' '; echo; done | sort -u | wc -l | tr -d ' ')
+if [ "$PHILO_NUMS" = "1" ]; then
+    echo "✅ PASS: EN / ZH / JA philosophy share one section numbering."
+else
+    echo "❌ FAIL: spec/philosophy*.md section numbers differ between languages."; FAILS=$((FAILS+1))
+fi
+if node scripts/check-links.js spec README*.md ABOUT.md AGENTS.md CLAUDE.md GEMINI.md MANUAL_TASKS.md .agents examples; then
+    echo "✅ PASS: links and anchors resolve."
+else
+    echo "❌ FAIL: broken links or anchors (see above)."; FAILS=$((FAILS+1))
+fi
+
+# 5. Drift & Stale Path Checks
 echo "--- Stale Content Detection ---"
 check_no_string "template/" "AGENTS.md"
 check_no_string "examples/ios" "AGENTS.md"

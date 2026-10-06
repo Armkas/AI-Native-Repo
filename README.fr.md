@@ -53,8 +53,8 @@ La CLI vous demandera de choisir parmi notre matrice de 12 modèles (4 Runtimes 
 
 **Étape 2 : Choisissez votre niveau de complexité (Tier)**
 - `light` : Les fichiers de contexte minimum pour des scripts simples.
-- `standard` : Par défaut. Architecture complète pour les services en production.
-- `full` : Niveau entreprise. Standard plus des garde-fous de chemins (fichiers en lecture seule / ajout seul, appliqués par hooks ou CI) et un vérificateur de fraîcheur du contexte.
+- `standard` : Par défaut. Architecture complète pour les services en production, avec critères d'acceptation, plans de tâche et une revue indépendante fondée sur une grille.
+- `full` : Garde-fous de haute maturité. Standard plus des garde-fous de chemins (fichiers en lecture seule / ajout seul, appliqués par hooks ou CI), un vérificateur de fraîcheur du contexte et des évaluations comportementales de la couche de contexte.
 
 *Alternativement, ignorez les invites avec les paramètres :*
 ```bash
@@ -136,16 +136,16 @@ Frontières explicites entre les composants.
 Capacités atomiques réutilisables.
 
 ### 5. Flux de travail ("Comment orchestrer")
-*`SOPs`*
-Procédures à plusieurs étapes.
+*`SOPs`, `Plans`*
+Procédures à plusieurs étapes (ex. « Définir les critères d'acceptation -> Vérifier les invariants -> Implémenter -> Tester -> Vérifier -> Relire -> Mettre à jour la doc »), plus des plans de tâche versionnés dans `docs/plans/` pour que la session suivante reprenne au lieu de repartir de zéro.
 
 ### 6. Outils ("Comment interagir avec le monde")
 *`MCP Servers`, `Scripts CLI`*
 Capacités structurées que l'agent peut utiliser.
 
-### 7. Vérification ("Les Preuves")
-*`Tests`, `Validators`, `Hooks`*
-Vérification du code + Vérification du comportement de l'agent. Le travail d'un agent n'est pas terminé tant que le script de validation ne renvoie pas le code 0.
+### 7. Vérification et évaluation ("Les Preuves")
+*`Tests`, `Validators`, `Hooks`, `Review`, `Evals`*
+Fermeture automatique de la boucle, ordonnée par fiabilité. D'abord les vérifications déterministes : le travail d'un agent n'est pas terminé tant qu'elles ne renvoient pas le code 0. Ensuite seulement, un **LLM-as-a-judge encadré** évalue ce qu'aucune commande ne peut trancher — critères d'acceptation atteints, périmètre respecté, documentation toujours exacte — avec une grille versionnée, un contexte indépendant, `UNKNOWN` comme réponse valide, et sans pouvoir annuler une vérification en échec. Les évaluations comportementales vérifient que la couche de contexte elle-même conduit les agents au bon comportement.
 
 ### 8. Frontière Humain / Agent ("Barrière de confiance")
 *`MANUAL_TASKS.md`*

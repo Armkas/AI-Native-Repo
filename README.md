@@ -53,8 +53,8 @@ The CLI will interactively ask you to choose from our 12-template matrix (4 Runt
 
 **Step 2: Choose Your Complexity Tier**
 - `light`: The bare minimum context files (PROJECT_MAP + core rules) for simple scripts or prototypes.
-- `standard`: The default. Full Context, Contracts, and Rules architecture for production services.
-- `full`: High-maturity guardrails. Standard plus path guardrails (read-only / append-only files, enforced by hooks or CI) and a context freshness checker.
+- `standard`: The default. Full Context, Contracts, and Rules architecture for production services, with acceptance criteria, task plans and an independent rubric-based review.
+- `full`: High-maturity guardrails. Standard plus path guardrails (read-only / append-only files, enforced by hooks or CI), a context freshness checker, and behavioral evals of the context layer.
 
 *Alternatively, bypass the prompts with flags:*
 ```bash
@@ -139,16 +139,16 @@ Explicit boundaries between components. AI agents rely on explicit interfaces at
 Reusable, atomic capabilities (e.g., "How to generate a database migration in this repo").
 
 ### 5. Workflows (The "How to orchestrate")
-*`SOPs`*
-Multi-step procedures (e.g., "Plan -> Check Invariants -> Implement -> Test -> Verify -> Update Docs").
+*`SOPs`, `Plans`*
+Multi-step procedures (e.g., "Define acceptance criteria -> Check Invariants -> Implement -> Test -> Verify -> Review -> Update Docs"), plus versioned task plans in `docs/plans/` so the next session continues instead of starting over.
 
 ### 6. Tools (The "How to touch the world")
 *`MCP Servers`, `Deterministic CLI Scripts`*
 Structured capabilities the agent can use to read the database, fetch logs, or compile code.
 
-### 7. Verification (The "Evidence")
-*`Tests`, `Validators`, `Hooks`*
-Automated closing of the loop. Code Verification + Agent Behavior Verification. An agent's job isn't done until the validator script returns exit code 0.
+### 7. Verification & Evaluation (The "Evidence")
+*`Tests`, `Validators`, `Hooks`, `Review`, `Evals`*
+Automated closing of the loop, ordered by reliability. Deterministic checks come first: an agent's job isn't done until they return exit code 0. Only then a **bounded LLM-as-a-judge** reviews what no command can decide — acceptance criteria met, scope kept, docs still true — using a versioned rubric, an independent context, `UNKNOWN` as a valid answer, and no power to override a failing check. Behavioral evals check that the context layer itself leads agents to the right behavior.
 
 ### 8. Human / Agent Boundary (The "Trust barrier")
 *`MANUAL_TASKS.md`*
