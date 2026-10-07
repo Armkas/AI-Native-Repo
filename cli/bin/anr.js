@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const path = require('path');
 const { initCommand, updateCommand, listCommand, doctorCommand, validateCommand, versionCommand } = require('../src/commands.js');
+const { indexCommand } = require('../src/indexer.js');
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -17,6 +18,7 @@ Commands:
   list             List available Runtimes and Tiers
   doctor           Check if the current project has AI-Native infrastructure
   validate         Validate the current AI-Native Repository
+  index [target]   Generate .agents/generated/code-index.md (interfaces, features, invariant coverage)
   version          Show CLI version
 
 Options for 'init':
@@ -28,7 +30,12 @@ Options for 'init':
 
 Options for 'update':
   --dry-run        Show planned updates without making changes
-  --force          Force overwrite user-customized files in addition to infrastructure
+  --prune          Delete files the template no longer ships (only if unmodified since install)
+  --force          Also overwrite / prune files you modified since install
+                   (by default anr compares each file with its fingerprint in anr.yaml and keeps your edits)
+
+Options for 'index':
+  --check          Exit 1 if the committed index is missing or stale (for CI)
 
 Example:
   npx ai-native-repo init . --runtime cursor --tier standard
@@ -54,6 +61,9 @@ switch (command) {
     break;
   case 'doctor':
     doctorCommand();
+    break;
+  case 'index':
+    indexCommand(args.slice(1));
     break;
   case 'validate':
     validateCommand(args.slice(1));

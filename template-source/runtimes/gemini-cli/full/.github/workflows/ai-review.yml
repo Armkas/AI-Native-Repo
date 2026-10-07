@@ -1,0 +1,100 @@
+name: AI Review (record-only)
+
+# Optional and opt-in: runs when a maintainer adds the `ai-review` label to a pull request.
+# The reviewer follows .agents/skills/review/ headlessly and read-only; scripts/ai-review-record.sh validates its
+# JSON, computes the overall verdict and publishes it as a job summary and an artifact.
+# Record-only: neither the verdict nor a failed reviewer run fails the pull request until the reviewer has been
+# calibrated against human grades (Rule 13). The reviewer's instructions (skill, rubric, schema, prompt, recorder)
+# are taken from the base branch, so a pull request cannot loosen the rubric it is judged by. GitHub still runs the
+# pull request's own copy of this workflow, and Gemini CLI loads its .gemini/ settings (folder trust is off by
+# default): read changes to .github/ and .gemini/ before adding the label, and protect both with CODEOWNERS / branch
+# protection.
+# Requires the repository secret GEMINI_API_KEY; optional repository variable AI_REVIEW_MODEL
+# pins the judge model. Pull requests from forks receive no secrets, so the job skips for them.
+
+on:
+  pull_request:
+    types: [labeled, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  ai-review:
+    if: contains(github.event.pull_request.labels.*.name, 'ai-review')
+    runs-on: ubuntu-latest
+    env:
+      AI_REVIEW_MODEL: ${{ vars.AI_REVIEW_MODEL }}
+      AI_REVIEW_BASE: origin/${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check credentials
+        id: creds
+        env:
+          KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"
+          else echo "::notice::GEMINI_API_KEY is not set; skipping the AI review."; fi
+
+      # Rule 16: whoever is evaluated must not edit the grader. Use the base branch's copy of everything the
+      # reviewer is judged by; fall back to the pull request's copy only when the base does not have it yet.
+      - name: Use reviewer files from the base branch
+        if: steps.creds.outputs.ok == 'true'
+        run: |
+          for p in .agents/skills/review .github/ai-review scripts/ai-review-record.sh; do
+            if git cat-file -e "$AI_REVIEW_BASE:$p" 2>/dev/null; then git checkout "$AI_REVIEW_BASE" -- "$p"
+            else echo "::notice::$p is not on the base branch yet; using the pull request's version."; fi
+          done
+
+      # The PR description is external content (Rule 17): it reaches the reviewer as a file, never as part of a script.
+      - name: Prepare inputs
+        if: steps.creds.outputs.ok == 'true'
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          mkdir -p .ai-review
+          printf '%s\n' "$PR_BODY" > .ai-review/pr-body.md
+          git diff "$AI_REVIEW_BASE...HEAD" > .ai-review/diff.patch
+
+      - uses: actions/setup-node@v7
+        if: steps.creds.outputs.ok == 'true'
+        with:
+          node-version: '24'
+
+      - name: Run reviewer (read-only)
+        id: run
+        if: steps.creds.outputs.ok == 'true'
+        continue-on-error: true
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          npm install -g @google/gemini-cli
+          # --approval-mode plan is read-only. Gemini CLI has no schema flag; ai-review-record.sh validates the shape.
+          gemini -p "$(cat .github/ai-review/prompt.md)" \
+            --approval-mode plan \
+            ${AI_REVIEW_MODEL:+-m "$AI_REVIEW_MODEL"} \
+            --output-format json \
+            > .ai-review/raw.json
+          jq -r '.response' .ai-review/raw.json > .ai-review/output.json
+
+      - name: Record result
+        id: record
+        if: steps.creds.outputs.ok == 'true' && steps.run.outcome == 'success'
+        continue-on-error: true
+        run: bash scripts/ai-review-record.sh gemini-cli .ai-review/output.json
+
+      - name: Report a failed review run
+        if: steps.creds.outputs.ok == 'true' && (steps.run.outcome != 'success' || steps.record.outcome != 'success')
+        run: |
+          echo "::warning::The AI review did not produce a valid result (run: ${{ steps.run.outcome }}, record: ${{ steps.record.outcome }}). The pull request is not affected."
+          echo "## AI review: no result (run ${{ steps.run.outcome }}, record ${{ steps.record.outcome }})" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        if: steps.creds.outputs.ok == 'true'
+        with:
+          name: ai-review
+          path: .ai-review/result.json
+          if-no-files-found: ignore

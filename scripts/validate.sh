@@ -139,6 +139,13 @@ if [ "$(grep -c '^## Rule' spec/repository-standard.md)" = "$(grep -c '^## 规�
 else
     echo "❌ FAIL: spec/repository-standard.md and .zh-CN.md differ in rule count."; FAILS=$((FAILS+1))
 fi
+for ex in examples/*/voice-chat; do
+    if node cli/bin/anr.js index "$ex" --check > /dev/null 2>&1; then
+        echo "✅ PASS: $ex/.agents/generated/code-index.md is up to date."
+    else
+        echo "❌ FAIL: $ex code index is stale. Run 'node cli/bin/anr.js index $ex'."; FAILS=$((FAILS+1))
+    fi
+done
 PHILO_NUMS=$(for f in spec/philosophy.md spec/philosophy.zh-CN.md spec/philosophy.ja.md; do grep -oE '^## [0-9]+(–[0-9]+)?(\.[0-9]+)?' "$f" | tr '\n' ' '; echo; done | sort -u | wc -l | tr -d ' ')
 if [ "$PHILO_NUMS" = "1" ]; then
     echo "✅ PASS: EN / ZH / JA philosophy share one section numbering."

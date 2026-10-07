@@ -124,7 +124,7 @@ Este repositório já oferece templates de primeira classe para quatro **Runtime
 3. **Contratos (O "Como se conectam")**: *`Protocols`, `Schemas`, `API Definitions`*
 4. **Habilidades (O "Como fazer uma tarefa específica")**: *`SKILL.md`*
 5. **Workflows (O "Como orquestrar")**: *`SOPs`, `Plans`*. Começam por critérios de aceitação; planos de tarefa versionados em `docs/plans/` deixam a próxima sessão continuar em vez de recomeçar.
-6. **Ferramentas (O "Como tocar o mundo")**: *`MCP Servers`, `Scripts CLI`*
+6. **Ferramentas (O "Como tocar o mundo")**: *`MCP Servers`, `Scripts CLI`, `.agents/tools.md`*
 7. **Verificação e avaliação (A "Evidência")**: *`Tests`, `Validators`, `Hooks`, `Review`, `Evals`*. Primeiro as verificações determinísticas (sem exit 0 não está pronto). Só depois um **LLM-as-a-judge delimitado** avalia o que nenhum comando decide — critérios de aceitação atendidos, escopo respeitado, documentação ainda verdadeira — com rubrica versionada, contexto independente, `UNKNOWN` como resposta válida e sem poder de anular uma verificação que falhou. Avaliações comportamentais verificam a própria camada de contexto.
 8. **Limite Humano / Agente (A "Barreira de confiança")**: *`MANUAL_TASKS.md`*
 

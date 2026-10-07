@@ -143,8 +143,8 @@ npx ai-native-repo init . --runtime claude-code --tier full --lang zh-CN   # en 
 多步操作程序（例如：“定义验收标准 -> 检查不变量 -> 实现 -> 测试 -> 验证 -> 评审 -> 更新文档”），以及放在 `docs/plans/` 中的版本化任务计划，让下一次会话接着做，而不是从头再来。
 
 ### 6. 工具 (Tools) - “如何触及世界”
-*`MCP Servers`, `Deterministic CLI Scripts`*
-结构化的能力扩展。智能体可以使用它们来安全地读取数据库、获取日志或编译代码。
+*`MCP Servers`, `Deterministic CLI Scripts`, `.agents/tools.md`*
+结构化的能力扩展。智能体可以使用它们来安全地读取数据库、获取日志或编译代码。每个工具都要登记在 `.agents/tools.md` 中并标明风险等级，凭证绝不放进提交的配置里。
 
 ### 7. 验证与评测 (Verification & Evaluation) - “闭环证据”
 *`Tests`, `Validators`, `Hooks`, `Review`, `Evals`*

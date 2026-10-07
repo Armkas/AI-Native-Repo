@@ -142,8 +142,8 @@ Capacidades atómicas reutilizables.
 Procedimientos de múltiples pasos (ej. "Definir criterios de aceptación -> Verificar invariantes -> Implementar -> Probar -> Verificar -> Revisar -> Actualizar documentos"), más planes de tarea versionados en `docs/plans/` para que la siguiente sesión continúe en lugar de empezar de cero.
 
 ### 6. Herramientas (El "Cómo tocar el mundo")
-*`MCP Servers`, `Scripts CLI deterministas`*
-Capacidades estructuradas que el agente puede usar para leer bases de datos, compilar código, etc.
+*`MCP Servers`, `Scripts CLI deterministas`, `.agents/tools.md`*
+Capacidades estructuradas que el agente puede usar para leer bases de datos, compilar código, etc. Cada herramienta se declara en `.agents/tools.md` con su nivel de riesgo, y las credenciales nunca viven en la configuración versionada.
 
 ### 7. Verificación y evaluación (La "Evidencia")
 *`Tests`, `Validators`, `Hooks`, `Review`, `Evals`*

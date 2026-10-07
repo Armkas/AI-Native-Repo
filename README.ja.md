@@ -126,7 +126,7 @@ AI に何万語もの巨大なドキュメントを読ませてはいけませ�
 3. **契約 (The "How they connect")**: *`Protocols`, `Schemas`, `API Definitions`*
 4. **スキル (The "How to do a specific task")**: *`SKILL.md`*
 5. **ワークフロー (The "How to orchestrate")**: *`SOPs`, `Plans`*。受け入れ基準の定義から始まり、`docs/plans/` のバージョン管理されたタスク計画で次のセッションが続きから進める。
-6. **ツール (The "How to touch the world")**: *`MCP Servers`, `Deterministic CLI Scripts`*
+6. **ツール (The "How to touch the world")**: *`MCP Servers`, `Deterministic CLI Scripts`, `.agents/tools.md`*
 7. **検証と評価 (The "Evidence")**: *`Tests`, `Validators`, `Hooks`, `Review`, `Evals`*。まず決定的チェック（exit 0 まで完了ではない）。その後、コマンドでは判定できない部分（受け入れ基準、範囲、ドキュメントの正しさ）だけを**制約された LLM-as-a-judge** がレビューする：バージョン管理された rubric、独立したコンテキスト、`UNKNOWN` を許容し、失敗したチェックを覆す権限はない。行動評価はコンテキスト層そのものを検証する。
 8. **人間とエージェントの境界 (The "Trust barrier")**: *`MANUAL_TASKS.md`*
 

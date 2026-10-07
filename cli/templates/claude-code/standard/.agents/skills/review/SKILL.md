@@ -15,8 +15,9 @@ what was asked, stay in scope, respect the invariants, and leave the docs true?
 
 ## Independence
 
-Review in a **fresh context**, not the one that wrote the change: a subagent, a new session, or a
-different model if your runtime offers one. Give the reviewer only:
+Review in a **fresh context**, not the one that wrote the change. If this repository ships a `reviewer`
+subagent for your runtime (standard tier and above do), delegate to it; otherwise use a new session or a
+different model. Give the reviewer only:
 
 1. the acceptance criteria,
 2. the diff (`git diff <base>` plus new files),
@@ -35,9 +36,28 @@ The author's explanation is not evidence; the reviewer checks the diff, the test
 
 ## Output
 
-```text
-criterion                                   verdict   evidence
-expired token returns 401                   PASS      tests/auth/test_token.py::test_expired_token_401
-refresh does not extend an expired session  UNKNOWN   no test covers it
-rubric: correctness PASS · invariants PASS · scope FAIL (reformatted src/legacy/x.ts) · tests PASS · docs PASS · safety PASS
+The reviewer returns JSON matching [result.schema.json](result.schema.json) — machine-readable, so results
+can be collected and compared with human grades (calibration):
+
+```json
+{
+  "criteria": [
+    { "criterion": "expired token returns 401", "verdict": "PASS", "evidence": "tests/auth/test_token.py::test_expired_token_401" },
+    { "criterion": "refresh does not extend an expired session", "verdict": "UNKNOWN", "evidence": "" }
+  ],
+  "rubric": {
+    "correctness": { "verdict": "PASS", "evidence": "both criteria traced to code" },
+    "invariants":  { "verdict": "PASS", "evidence": "INV-003 untouched" },
+    "scope":       { "verdict": "FAIL", "evidence": "reformatted src/legacy/x.ts" },
+    "tests":       { "verdict": "PASS", "evidence": "new test fails without the change" },
+    "docs":        { "verdict": "PASS", "evidence": "backend_rpc.md updated" },
+    "safety":      { "verdict": "PASS", "evidence": "" }
+  },
+  "notes": ""
+}
 ```
+
+The reviewer does not decide the overall result. Tooling computes it — `FAIL` if any verdict is `FAIL`,
+`PASS` only if every verdict is `PASS`, otherwise `UNKNOWN` — and adds a `meta` block (reviewed commit,
+judge runtime and model, rubric version). The optional CI workflow (`.github/workflows/ai-review.yml`, full
+tier) does exactly that and stays record-only until the reviewer is calibrated.

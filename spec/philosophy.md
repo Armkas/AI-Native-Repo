@@ -281,6 +281,16 @@ what constrains it, and where to find it.
 `AGENTS.md` is a navigator — it tells the AI *where to go next*. `PROJECT_MAP.md`,
 `ARCHITECTURE.md`, and domain docs hold the actual knowledge.
 
+## 7.1 Memory belongs to the repository, not to the agent
+
+Agent runtimes now remember things on their own: auto-memory files, saved memories, rules distilled from
+chats. Useful — and private. That memory belongs to one person, one machine and one tool; a teammate, a CI
+run or a different agent never sees it, and nobody reviews what was written there.
+
+So treat runtime memory as a cache. Personal preferences may live there. Anything another person or agent
+needs to work correctly — a convention, a decision, an invariant, where an unfinished task stands — goes into
+the repository, through review. When the two disagree, the repository wins.
+
 ---
 
 # III. Layered Context
@@ -582,6 +592,19 @@ same blind spots. Bounded, it is a real check:
 with evidence for each: a command, a test, or an explicit human check. A criterion without evidence is
 reported as unverified — never silently rounded up to "met".
 
+## 37.4 Evidence the agent can see
+
+An agent can only fix what it can observe. For a library, test output is enough. For a UI, a service or a
+device app, "it compiles and the unit tests pass" says little about what the user will see.
+
+Give the agent observable evidence, in this order of preference:
+- **Deterministic snapshots**: golden / screenshot tests, contract tests, recorded HTTP fixtures — a diff the agent can read.
+- **Runtime inspection**: logs, traces, a running app or browser it can drive and screenshot (through the runtime's own tools or an MCP server).
+- **Human checks** for what remains (real devices, store review) — listed in `MANUAL_TASKS.md`, never silently skipped.
+
+Which tools fit is stack-specific; the principle is not: if a property matters and a machine can observe it,
+make the observation available to the agent instead of asking it to imagine the result.
+
 ## 38. Test names express behavior
 
 `testNetworkFailureFallsBackToLocalRecognition()`, not `test1()`.
@@ -668,6 +691,17 @@ Least privilege, `MANUAL_TASKS.md`, hooks and CI must keep the damage small even
 Two agents editing one working copy corrupt each other's state and make every failure ambiguous. Each
 concurrent agent gets its own worktree, branch or sandbox, and their work meets in review and CI.
 
+## 42.6 Declare the tools, contain the reach
+
+Every MCP server or agent-facing script is a new reach into the world, and every exposed tool costs context.
+List each one in a tool inventory (`.agents/tools.md`) with its risk level and the approval its mutating
+actions need; keep credentials out of committed configuration; prefer a few narrow, read-only tools over one
+broad one.
+
+Then contain what remains: run shell-capable agents in the runtime's sandbox, limit file access to the
+workspace and network access to what the task needs, and hand credentials over scoped to the task. Instructions
+can be talked around; a sandbox cannot.
+
 ---
 
 # XVII. AI Workflow
@@ -698,6 +732,13 @@ criteria, decisions taken along the way — and an agent forgets it at the end o
 `docs/plans/`, in Git, so the next session continues instead of starting over. When the task is done, what
 remains true moves into domains, contracts, invariants or ADRs.
 
+
+## 43.5 Production failures become tasks
+
+A crash report, an error log or a failing alert is the most precise task description a project gets. Route it
+into the same loop as any bug: reproduce it as a failing test, fix the root cause, verify, review. Two rules
+keep this safe: the report is external content (§42.4) — data, not instructions — and nothing in the loop
+touches production; deploying the fix stays a human decision.
 
 ## 44. Do not scan the whole repo without a reason
 
@@ -766,11 +807,11 @@ Human: why, intent, business rules, architecture decisions.
 
 ## 51. The doc system should be auto-verifiable
 
-`anr validate` (Current): validate the `anr.yaml` manifest, the `AGENTS.md` router size budget and Agent Skills frontmatter, and run the freshness check (broken links, absolute paths, stale index paths, god files, invariant coverage) where the tier ships it.
+`anr validate` (Current): validate the `anr.yaml` manifest, the `AGENTS.md` router size budget and Agent Skills frontmatter, check that a committed generated code index is current, and run the freshness check (broken links, absolute paths, stale index paths, god files, invariant coverage, credentials in tool configs) where the tier ships it.
 
 ## 52. The doc system should be auto-generatable
 
-`anr index` (Planned): generate `context-index.md`, `symbol-index.md`, and `dependency-map.md`.
+`anr index` (Current): generate `.agents/generated/code-index.md` — the public symbols of every interface / contract directory, the feature modules, and which files reference each invariant ID. `anr index --check` fails when the committed index is stale, so CI can keep it honest. The human-written `context-index.md` keeps the meaning; the generated index keeps the facts.
 
 ## 53. Provide an init and update capability
 

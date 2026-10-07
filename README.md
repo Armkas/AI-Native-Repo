@@ -143,8 +143,8 @@ Reusable, atomic capabilities (e.g., "How to generate a database migration in th
 Multi-step procedures (e.g., "Define acceptance criteria -> Check Invariants -> Implement -> Test -> Verify -> Review -> Update Docs"), plus versioned task plans in `docs/plans/` so the next session continues instead of starting over.
 
 ### 6. Tools (The "How to touch the world")
-*`MCP Servers`, `Deterministic CLI Scripts`*
-Structured capabilities the agent can use to read the database, fetch logs, or compile code.
+*`MCP Servers`, `Deterministic CLI Scripts`, `.agents/tools.md`*
+Structured capabilities the agent can use to read the database, fetch logs, or compile code. Every tool is declared in `.agents/tools.md` with its risk level, and credentials never live in committed configuration.
 
 ### 7. Verification & Evaluation (The "Evidence")
 *`Tests`, `Validators`, `Hooks`, `Review`, `Evals`*

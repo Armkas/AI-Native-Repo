@@ -140,8 +140,8 @@ Capacités atomiques réutilisables.
 Procédures à plusieurs étapes (ex. « Définir les critères d'acceptation -> Vérifier les invariants -> Implémenter -> Tester -> Vérifier -> Relire -> Mettre à jour la doc »), plus des plans de tâche versionnés dans `docs/plans/` pour que la session suivante reprenne au lieu de repartir de zéro.
 
 ### 6. Outils ("Comment interagir avec le monde")
-*`MCP Servers`, `Scripts CLI`*
-Capacités structurées que l'agent peut utiliser.
+*`MCP Servers`, `Scripts CLI`, `.agents/tools.md`*
+Capacités structurées que l'agent peut utiliser. Chaque outil est déclaré dans `.agents/tools.md` avec son niveau de risque, et aucun identifiant ne vit dans la configuration versionnée.
 
 ### 7. Vérification et évaluation ("Les Preuves")
 *`Tests`, `Validators`, `Hooks`, `Review`, `Evals`*

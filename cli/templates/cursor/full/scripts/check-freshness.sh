@@ -2,7 +2,8 @@
 # AI context freshness check — verifies the AI Context Layer has not rotted.
 # Usage: bash scripts/check-freshness.sh [--strict]
 #   Hard failures: broken relative links, absolute local paths, malformed skills.
-#   Warnings (failures with --strict): oversized AGENTS.md, stale paths in the context index, god files.
+#   Hard failures also: credentials in committed agent / MCP configs.
+#   Warnings (failures with --strict): stale paths in the context index, god files, MCP servers missing from .agents/tools.md.
 set -u
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$ROOT" || exit 1
@@ -51,6 +52,7 @@ while IFS= read -r l; do fail "Absolute local path (use a relative link): $l"; d
 #    - name matches directory
 #    - name is 1-64 chars, lowercase alphanumeric, single hyphens (no leading/trailing hyphen, no consecutive hyphens)
 #    - description is non-empty and <= 1024 chars
+#    - compatibility (optional) is 1-500 chars when present
 for s in .agents/skills/*/SKILL.md; do
   [ -f "$s" ] || continue
   d=$(basename "$(dirname "$s")")
@@ -62,6 +64,11 @@ for s in .agents/skills/*/SKILL.md; do
   [ ${#n} -le 64 ] || fail "$s: name '$n' exceeds 64 chars (${#n})"
   [ -n "$desc" ] || fail "$s: empty description (runtimes use it to decide when to load the skill)"
   [ ${#desc} -le 1024 ] || fail "$s: description exceeds 1024 chars (${#desc})"
+  # Optional compatibility: 1-500 chars when the key is present.
+  if awk 'NR>1 && /^---$/{exit} /^compatibility:/{f=1} END{exit !f}' "$s"; then
+    compat=$(awk 'NR>1 && /^---$/{exit} /^compatibility:/{sub(/^compatibility:[[:space:]]*/,""); gsub(/^["'\'']+|["'\'']+$/,""); print}' "$s")
+    [ -n "$compat" ] && [ ${#compat} -le 500 ] || fail "$s: compatibility must be 1-500 chars when present (${#compat})"
+  fi
 done
 
 # 4. The router must stay small (Rule 01: <= 2 KB / 2048 bytes).
@@ -108,6 +115,22 @@ if [ -d docs/invariants ] && git rev-parse --git-dir >/dev/null 2>&1; then
     n=$(echo "$uncovered" | wc -w | tr -d ' ')
     echo "ℹ️  Invariants: $((total-n))/$total referenced outside docs/ (tests).${uncovered:+ Not yet:$uncovered}"
   fi
+fi
+
+# 8. Tools (Rule 19): committed agent / MCP configs carry no credentials, and configured MCP servers are inventoried.
+TOOL_CONFIGS=".mcp.json .cursor/mcp.json .vscode/mcp.json .gemini/settings.json .codex/config.toml .claude/settings.json"
+# Each token must start at a boundary, or names such as "risk-assessment-server" would match `sk-`.
+SECRET='(^|[^A-Za-z0-9_-])(sk-ant-[A-Za-z0-9_-]{10,}|sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[abprs]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35})|-----BEGIN [A-Z ]*PRIVATE KEY-----'
+mcp_configured=0
+for c in $TOOL_CONFIGS; do
+  [ -f "$c" ] || continue
+  grep -qE "$SECRET" "$c" && fail "$c contains what looks like a credential. Reference an environment variable instead (Rule 19)."
+  grep -qE '"mcpServers"|"servers"|\[mcp_servers' "$c" && mcp_configured=1
+done
+# An inventory row starts with a backticked tool name; rows inside <!-- --> comments are examples.
+if [ "$mcp_configured" -eq 1 ] && [ -f .agents/tools.md ] &&
+   ! awk '/<!--/{c=1} c{ if (/-->/) c=0; next } /^\| *`/{f=1} END{exit !f}' .agents/tools.md; then
+  warn "MCP servers are configured but .agents/tools.md lists no tools (Rule 19)."
 fi
 
 echo "---"

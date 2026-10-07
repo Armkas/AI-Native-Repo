@@ -63,5 +63,7 @@ never hard-code a provider into a rubric, a scenario or a directory name.
   is unexplainable if the model changed silently.
 - **Prefer independence.** A judge from a different context — and, where available, a different model family — than the
   author shares fewer of its blind spots.
+- **Pin it in CI.** The optional `ai-review.yml` workflow (full tier) reads the judge model from the repository variable
+  `AI_REVIEW_MODEL` and writes it into every result; unset, it records `runtime-default`, which makes results harder to compare.
 - **Re-calibrate on change.** Switching the judge model invalidates its calibration against human grades; re-run the
   human sample before letting its verdicts gate anything.

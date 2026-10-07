@@ -142,8 +142,8 @@ npx ai-native-repo init . --runtime claude-code --tier full --lang zh-CN   # en 
 多步程序（例如「定義驗收標準 -> 檢查不變量 -> 實現 -> 測試 -> 驗證 -> 評審 -> 更新文檔」），以及放在 `docs/plans/` 中的版本化任務計劃，讓下一次會話接著做，而不是從頭再來。
 
 ### 6. 工具 (Tools - "How to touch the world")
-*`MCP Servers`, `Deterministic CLI Scripts`*
-代理可以用來讀取數據庫、獲取日誌或編譯代碼的結構化能力。
+*`MCP Servers`, `Deterministic CLI Scripts`, `.agents/tools.md`*
+代理可以用來讀取數據庫、獲取日誌或編譯代碼的結構化能力。每個工具都要登記在 `.agents/tools.md` 中並標明風險等級，憑證絕不放進提交的配置裡。
 
 ### 7. 驗證與評測 (Verification & Evaluation - "Evidence")
 *`Tests`, `Validators`, `Hooks`, `Review`, `Evals`*

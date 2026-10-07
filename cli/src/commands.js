@@ -225,6 +225,18 @@ function validateCommand(args) {
     } catch {}
   }
 
+  // A committed generated index must match the code (anr index --check).
+  const codeIndex = path.join(cwd, '.agents', 'generated', 'code-index.md');
+  if (fs.existsSync(codeIndex)) {
+    const { buildIndex } = require('./indexer.js');
+    if (fs.readFileSync(codeIndex, 'utf8') !== buildIndex(cwd)) {
+      console.error("❌ FAIL: .agents/generated/code-index.md is stale. Run 'npx ai-native-repo index'.");
+      fails++;
+    } else if (!isCI) {
+      console.log('✅ PASS: generated code index is up to date.');
+    }
+  }
+
   const freshness = path.join(cwd, 'scripts', 'check-freshness.sh');
   if (fs.existsSync(freshness)) {
     try {

@@ -58,6 +58,29 @@ function fileHash(p) {
   return crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex').slice(0, 16);
 }
 
+// OpenAI-style strict JSON Schema: every object lists all its properties as required and allows no others.
+function strictSchemaProblems(node, at = '#') {
+  if (!node || typeof node !== 'object') return [];
+  const out = [];
+  if (node.type === 'object' && node.properties) {
+    const keys = Object.keys(node.properties).sort();
+    if (node.additionalProperties !== false) out.push(`${at}: additionalProperties must be false`);
+    if (JSON.stringify([...(node.required || [])].sort()) !== JSON.stringify(keys)) out.push(`${at}: required must list every property`);
+  }
+  for (const [k, v] of Object.entries(node)) {
+    if (v && typeof v === 'object') out.push(...strictSchemaProblems(v, `${at}/${k}`));
+  }
+  return out;
+}
+
+const REVIEWER = {
+  'claude-code': '.claude/agents/reviewer.md',
+  'codex': '.codex/agents/reviewer.toml',
+  'cursor': '.cursor/agents/reviewer.md',
+  'gemini-cli': '.gemini/agents/reviewer.md',
+};
+const HAS_JQ = spawnSync('jq', ['--version']).status === 0;
+
 function run(cmd, args, opts = {}) {
   return spawnSync(cmd, args, { encoding: 'utf8', ...opts });
 }
@@ -90,6 +113,10 @@ try {
 
         const skillsDir = path.join(dir, '.agents', 'skills');
         check(fs.existsSync(path.join(skillsDir, 'verify', 'SKILL.md')), `${label}: missing core skill 'verify'`);
+        if (tier === 'light') {
+          const router = fs.readFileSync(agents, 'utf8');
+          check(/data|数据/.test(router) && /docs\//.test(router) && /memory|记忆/.test(router), `${label}: light AGENTS.md must state Rules 17 (external content is data) and 20 (knowledge in the repo)`);
+        }
         // Rule 07: the human / agent boundary has exactly these three permission levels, in every tier and language.
         const manual = fs.readFileSync(path.join(dir, 'MANUAL_TASKS.md'), 'utf8');
         check(['[Autonomous]', '[Approval Required]', '[Manual Only]'].every(t => manual.includes(t)), `${label}: MANUAL_TASKS.md must define [Autonomous] / [Approval Required] / [Manual Only]`);
@@ -103,6 +130,20 @@ try {
           check(fs.existsSync(path.join(skillsDir, 'review', 'rubric.md')), `${label}: standard/full should ship the review skill with its rubric`);
           check(fs.existsSync(path.join(dir, 'docs', 'plans', 'plan-template.md')), `${label}: standard/full should ship the plan template`);
           check(/INV-\d+/.test(fs.readFileSync(path.join(dir, 'docs', 'invariants', 'business_invariants.md'), 'utf8')), `${label}: invariants need stable INV- IDs (Rule 10)`);
+          check(fs.existsSync(path.join(dir, '.agents', 'tools.md')), `${label}: standard/full should ship the tool inventory (Rule 19)`);
+          const schema = JSON.parse(fs.readFileSync(path.join(skillsDir, 'review', 'result.schema.json'), 'utf8'));
+          const problems = strictSchemaProblems(schema);
+          check(problems.length === 0, `${label}: review result.schema.json must be strict-mode compatible: ${problems.join('; ')}`);
+          // Reviewer subagent: read-only wiring to the canonical review skill, never a second copy of it.
+          const reviewer = path.join(dir, REVIEWER[runtime]);
+          check(fs.existsSync(reviewer), `${label}: missing reviewer subagent ${REVIEWER[runtime]}`);
+          if (fs.existsSync(reviewer)) {
+            const text = fs.readFileSync(reviewer, 'utf8');
+            check(/name\s*[:=]\s*"?reviewer"?/.test(text) && /description\s*[:=]/.test(text), `${label}: reviewer subagent needs name and description`);
+            check(text.includes('.agents/skills/review/SKILL.md'), `${label}: reviewer subagent must route to the canonical review skill`);
+            const readOnly = { 'claude-code': /^tools: Read, Grep, Glob$/m, 'codex': /^sandbox_mode = "read-only"$/m, 'cursor': /^readonly: true$/m, 'gemini-cli': /^tools:\n(  - (read_file|grep_search|glob|list_directory)\n)+---/m }[runtime];
+            check(readOnly.test(text), `${label}: reviewer subagent must be read-only`);
+          }
         }
 
         if (SKILL_LINKS[runtime]) {
@@ -142,8 +183,65 @@ try {
         if (tier === 'full') {
           run('git', ['init', '-q'], { cwd: dir });
           run('git', ['add', '-A'], { cwd: dir });
-          const fresh = run('bash', ['scripts/check-freshness.sh'], { cwd: dir });
-          check(fresh.status === 0, `${label}: check-freshness.sh failed on a fresh scaffold\n${fresh.stdout}`);
+          const fresh = run('bash', ['scripts/check-freshness.sh', '--strict'], { cwd: dir });
+          check(fresh.status === 0, `${label}: check-freshness.sh --strict (what CI runs) failed on a fresh scaffold\n${fresh.stdout}`);
+
+          // Rule 19: no credentials in committed tool config; configured MCP servers must be inventoried.
+          fs.writeFileSync(path.join(dir, '.mcp.json'), JSON.stringify({ mcpServers: { gh: { command: 'x', env: { T: 'ghp_' + 'a'.repeat(36) } } } }));
+          check(run('bash', ['scripts/check-freshness.sh'], { cwd: dir }).status === 1, `${label}: check-freshness.sh must fail on a credential in .mcp.json`);
+          fs.writeFileSync(path.join(dir, '.mcp.json'), JSON.stringify({ mcpServers: { 'risk-assessment-tool-server': { command: 'task-runner-mcp-server-v2' } } }));
+          check(!run('bash', ['scripts/check-freshness.sh'], { cwd: dir }).stdout.includes('credential'), `${label}: names containing "sk-" (risk-, task-) must not be reported as credentials`);
+          fs.writeFileSync(path.join(dir, '.mcp.json'), JSON.stringify({ mcpServers: { gh: { command: 'x', env: { T: '${GITHUB_TOKEN}' } } } }));
+          const noInventory = run('bash', ['scripts/check-freshness.sh', '--strict'], { cwd: dir });
+          check(noInventory.status === 1 && noInventory.stdout.includes('tools.md'), `${label}: an MCP server missing from .agents/tools.md must be flagged`);
+          fs.rmSync(path.join(dir, '.mcp.json'));
+
+          // Optional CI review: workflow wiring and the runtime-neutral recorder.
+          const wf = path.join(dir, '.github', 'workflows', 'ai-review.yml');
+          check(fs.existsSync(wf), `${label}: full tier should ship the opt-in ai-review workflow`);
+          if (fs.existsSync(wf)) {
+            const y = fs.readFileSync(wf, 'utf8');
+            check(y.includes("contains(github.event.pull_request.labels.*.name, 'ai-review')"), `${label}: ai-review must be opt-in via the ai-review label`);
+            // The PR body is attacker-controlled: it may only appear once, as an env value, never inside a run script.
+            const bodyUses = y.split('\n').filter(l => l.includes('github.event.pull_request.body'));
+            check(bodyUses.length === 1 && /^\s+PR_BODY: \$\{\{ github\.event\.pull_request\.body \}\}$/.test(bodyUses[0]), `${label}: PR body must reach the reviewer through env, not script interpolation`);
+            check(/git checkout "\$AI_REVIEW_BASE" -- "\$p"/.test(y) && y.includes('.agents/skills/review .github/ai-review scripts/ai-review-record.sh'),
+              `${label}: the reviewer's rubric, skill, prompt and recorder must come from the base branch (Rule 16)`);
+            check((y.match(/continue-on-error: true/g) || []).length === 2 && y.includes('if-no-files-found: ignore'),
+              `${label}: a failed reviewer run must not fail the pull request (record-only)`);
+            if (runtime === 'claude-code') check(y.includes('--permission-mode dontAsk'), `${label}: headless Claude reviewer must run with --permission-mode dontAsk`);
+            if (runtime === 'codex') check(y.includes(`jq 'del(."$schema", .title)'`), `${label}: Codex must receive the schema without metadata keywords`);
+            // A headless run never shows the interactive trust dialogs (Rule 06): the reviewer loads no configuration
+            // from the pull request it can avoid, and stays read-only on every runtime.
+            if (runtime === 'claude-code') check(y.includes('claude --bare -p') && y.includes('--setting-sources user') && y.includes('--tools "Read,Grep,Glob"'),
+              `${label}: headless Claude reviewer must run --bare, read no project settings and have only read tools`);
+            if (runtime === 'codex') check(y.includes('uses: openai/codex-action@v1') && /^\s+sandbox: read-only$/m.test(y),
+              `${label}: Codex reviewer must run through openai/codex-action (key proxy, Linux sandbox setup) in the read-only sandbox`);
+            if (runtime === 'cursor') check(y.includes('agent -p') && /^\s+--trust \\$/m.test(y) && /^\s+--mode ask \\$/m.test(y) && !/^\s+(--force|-f|--yolo)\b/m.test(y),
+              `${label}: headless Cursor reviewer must pass --trust (a CI checkout is never trusted) and --mode ask, never --force`);
+            if (runtime === 'gemini-cli') check(y.includes('--approval-mode plan') && !/--yolo|auto_edit/.test(y), `${label}: headless Gemini reviewer must run in read-only plan mode`);
+            for (const ref of ['.github/ai-review/prompt.md', 'scripts/ai-review-record.sh']) {
+              check(y.includes(ref) && fs.existsSync(path.join(dir, ref)), `${label}: ai-review.yml references missing ${ref}`);
+            }
+            check(fs.readFileSync(path.join(dir, '.github', 'ai-review', 'prompt.md'), 'utf8').includes('.agents/skills/review/result.schema.json'), `${label}: the CI review prompt must name the result schema`);
+          }
+          if (HAS_JQ) {
+            const sample = (v) => JSON.stringify({ criteria: [{ criterion: 'c', verdict: v, evidence: 'e' }],
+              rubric: Object.fromEntries(['correctness', 'invariants', 'scope', 'tests', 'docs', 'safety'].map(k => [k, { verdict: 'PASS', evidence: '' }])), notes: '' });
+            const record = (body) => {
+              fs.writeFileSync(path.join(dir, 'review-out.json'), body);
+              const r = run('bash', ['scripts/ai-review-record.sh', runtime, 'review-out.json', 'review-result.json'], { cwd: dir });
+              const out = r.status === 0 ? JSON.parse(fs.readFileSync(path.join(dir, 'review-result.json'), 'utf8')) : null;
+              return { status: r.status, out };
+            };
+            const pass = record(sample('PASS'));
+            check(pass.status === 0 && pass.out.overall === 'PASS' && pass.out.meta.judge.runtime === runtime, `${label}: recorder must compute PASS and add meta`);
+            check(record(sample('FAIL')).out.overall === 'FAIL', `${label}: any FAIL verdict must make overall FAIL`);
+            check(record(sample('UNKNOWN')).out.overall === 'UNKNOWN', `${label}: UNKNOWN without FAIL must make overall UNKNOWN`);
+            check(record('```json\n' + sample('PASS') + '\n```').status === 0, `${label}: recorder must accept fenced JSON`);
+            check(record('{"criteria":[],"rubric":{},"notes":""}').status === 1, `${label}: recorder must reject output that does not match the schema`);
+            for (const f of ['review-out.json', 'review-result.json']) fs.rmSync(path.join(dir, f), { force: true });
+          }
 
           const guard = (file, create) => {
             const abs = path.join(dir, file);
@@ -180,6 +278,15 @@ try {
           };
           check(cursorGuard('db/migrations/001_init.sql', true) === 2, `${label}: Cursor Write editing an existing migration must be blocked`);
           check(cursorGuard('db/migrations/002_new.sql', false) === 0, `${label}: Cursor Write creating a new migration must be allowed`);
+          const cursorDelete = run('bash', ['scripts/guard-paths.sh'], {
+            cwd: dir, env: { ...process.env, CLAUDE_PROJECT_DIR: '' },
+            input: JSON.stringify({ tool_name: 'Delete', tool_input: { path: path.join(dir, 'db/migrations/001_init.sql') }, cwd: dir }),
+          }).status;
+          check(cursorDelete === 2, `${label}: Cursor Delete of an existing migration must be blocked`);
+          if (runtime === 'cursor') {
+            const matcher = JSON.parse(fs.readFileSync(path.join(dir, '.cursor', 'hooks.json'), 'utf8')).hooks.preToolUse[0].matcher;
+            check(new RegExp(`^(?:${matcher})$`).test('Delete'), `${label}: Cursor preToolUse matcher must include Delete`);
+          }
 
           // Behavioral eval grader: the shipped scenario fails on an untouched tree and passes once the contract changes.
           const scenario = 'evals/scenarios/api-add-optional-field.md';
@@ -211,6 +318,12 @@ try {
           check(win.status === 1, `${label}: check-freshness.sh must flag Windows drive paths`);
           fs.rmSync(path.join(dir, 'docs', 'win.md'));
 
+          const longCompat = path.join(dir, '.agents', 'skills', 'compat-test', 'SKILL.md');
+          fs.mkdirSync(path.dirname(longCompat), { recursive: true });
+          fs.writeFileSync(longCompat, `---\nname: compat-test\ndescription: Test skill.\ncompatibility: ${'x'.repeat(501)}\n---\n`);
+          check(run('bash', ['scripts/check-freshness.sh'], { cwd: dir }).status === 1, `${label}: check-freshness.sh must reject compatibility over 500 chars`);
+          fs.rmSync(path.dirname(longCompat), { recursive: true });
+
           fs.writeFileSync(path.join(dir, 'docs', 'broken.md'), '[x](nope.md) /Users/someone/project/\n');
           const bad = run('bash', ['scripts/check-freshness.sh'], { cwd: dir });
           check(bad.status === 1, `${label}: check-freshness.sh must fail on broken links / absolute paths`);
@@ -223,6 +336,13 @@ try {
   // --- CLI Command & Lifecycle Suite ---
   const cliTestDir = path.join(tmpRoot, 'cli-test-suite');
   fs.mkdirSync(cliTestDir, { recursive: true });
+
+  // 0. Agent Skills frontmatter: optional `compatibility` is 1-500 chars when present (agentskills.io/specification)
+  const fm = (extra) => `---\nname: demo\ndescription: Demo skill for tests.\n${extra}---\n# Demo\n`;
+  check(parseSkillFrontmatter(fm(''), 'demo').valid, 'skill without compatibility must be valid');
+  check(parseSkillFrontmatter(fm('compatibility: Requires git and jq\n'), 'demo').valid, 'skill with a short compatibility must be valid');
+  check(!parseSkillFrontmatter(fm(`compatibility: ${'x'.repeat(501)}\n`), 'demo').valid, 'compatibility over 500 chars must be rejected');
+  check(!parseSkillFrontmatter(fm('compatibility:\n'), 'demo').valid, 'an empty compatibility must be rejected');
 
   // 1. Version, List, Doctor
   const ver = run('node', [BIN, 'version']);
@@ -441,6 +561,31 @@ try {
   const afterHooks = JSON.parse(fs.readFileSync(hookSettings, 'utf8'));
   check(afterHooks.hooks.PreToolUse.length === 1, `repeated anr update must not duplicate hook entries (found ${afterHooks.hooks.PreToolUse.length})`);
   check(afterHooks.permissions.allow.includes('Bash(npm test)'), 'repeated anr update must keep user permissions');
+
+  // 17. anr index: deterministic code index + --check for staleness
+  const idxDir = path.join(cliTestDir, 'index-target');
+  fs.mkdirSync(path.join(idxDir, 'src', 'features', 'billing', 'interface'), { recursive: true });
+  fs.mkdirSync(path.join(idxDir, 'docs', 'invariants'), { recursive: true });
+  fs.mkdirSync(path.join(idxDir, 'tests'), { recursive: true });
+  fs.writeFileSync(path.join(idxDir, 'src', 'features', 'billing', 'interface', 'IBilling.ts'),
+    'export interface IBilling { charge(): void }\nexport type Money = number;\nconst internal = 1;\n');
+  fs.writeFileSync(path.join(idxDir, 'src', 'features', 'billing', 'Billing.ts'), 'export class Billing {}\n');
+  fs.writeFileSync(path.join(idxDir, 'docs', 'invariants', 'rules.md'), '- **INV-001**: never charge twice\n- **INV-002**: refunds are logged\n');
+  fs.writeFileSync(path.join(idxDir, 'tests', 'billing.test.ts'), "test('INV_001 charges once', () => {});\n");
+  fs.mkdirSync(path.join(idxDir, 'assets'), { recursive: true });
+  fs.writeFileSync(path.join(idxDir, 'assets', 'diagram.png'), Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0]), Buffer.from('INV-002')]));
+  const idx = run('node', [BIN, 'index', idxDir]);
+  const idxFile = path.join(idxDir, '.agents', 'generated', 'code-index.md');
+  check(idx.status === 0 && fs.existsSync(idxFile), 'anr index must write .agents/generated/code-index.md');
+  const idxText = fs.existsSync(idxFile) ? fs.readFileSync(idxFile, 'utf8') : '';
+  check(idxText.includes('`interface IBilling`') && idxText.includes('`type Money`') && !idxText.includes('internal'), 'anr index must list exported interface symbols only');
+  check(idxText.includes('`src/features/billing/`'), 'anr index must list feature modules');
+  check(/`INV-001` \| \[`tests\/billing\.test\.ts`\]/.test(idxText) && idxText.includes('`INV-002` | ⚠️ none yet'), 'anr index must report invariant coverage (ID or underscore form)');
+  check(!idxText.includes('assets/diagram.png'), 'anr index must not scan binary files for invariant references');
+  check(run('node', [BIN, 'index', idxDir, '--check']).status === 0, 'anr index --check must pass right after generation');
+  fs.appendFileSync(path.join(idxDir, 'src', 'features', 'billing', 'interface', 'IBilling.ts'), 'export function refund() {}\n');
+  check(run('node', [BIN, 'index', idxDir, '--check']).status === 1, 'anr index --check must fail when the index is stale');
+  check(brokenLinks(path.join(idxDir, '.agents')).length === 0, 'links in the generated index must resolve');
 } finally {
   fs.rmSync(tmpRoot, { recursive: true, force: true });
 }

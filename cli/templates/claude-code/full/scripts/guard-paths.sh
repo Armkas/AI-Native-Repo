@@ -3,7 +3,8 @@
 #
 # Modes:
 #   hook (default) — reads a pre-tool-call JSON on stdin and exits 2 to block the call. Understands
-#                    a single file path in tool_input (Claude Code PreToolUse, Gemini CLI BeforeTool)
+#                    a single file path in tool_input (Claude Code PreToolUse, Gemini CLI BeforeTool,
+#                    Cursor preToolUse Write / Delete)
 #                    and the patch text of Codex apply_patch (tool_input.command), where every
 #                    Add / Update / Delete / Move target is checked.
 #   check <path>   — checks a single path as if it were about to be edited.

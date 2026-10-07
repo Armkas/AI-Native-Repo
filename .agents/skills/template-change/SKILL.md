@@ -12,6 +12,8 @@ description: How to change templates, the anr CLI or the examples in this refere
 - **Language variants**: `*.zh-CN.md` / `*.ja.md` replace the base file at `anr init --lang`. They must link to **base** filenames (`MANUAL_TASKS.md`, not `MANUAL_TASKS.zh-CN.md`).
 - **Skills**: canonical in `common/<tier>/.agents/skills/<name>/SKILL.md`. Codex, Cursor and Gemini CLI read `.agents/skills/` natively; only Claude Code gets a `.claude/skills` symlink at init. Never keep a copy in `template-source/`.
 - **Guardrails**: logic lives once in `common/full/scripts/guard-paths.sh`; runtime overlays (`.claude/settings.json`, `.gemini/settings.json`, `.codex/hooks.json`, `.cursor/hooks.json`) only wire it.
+- **Reviewer subagents** live in `runtimes/<rt>/standard/` (one per runtime, read-only, routing to the canonical `review` skill); the opt-in CI review is `runtimes/<rt>/full/.github/workflows/ai-review.yml`, sharing `common/full/.github/ai-review/prompt.md` and `common/full/scripts/ai-review-record.sh`. Only the steps that install and run the reviewer differ per runtime (Codex runs through `openai/codex-action`); `cli/tests/test.js` pins each runtime's read-only, trust-aware flags.
+- **`anr index`** lives in `cli/src/indexer.js`; the examples commit its output, and `validate.sh` fails when it is stale (`node cli/bin/anr.js index examples/<rt>/voice-chat`).
 - **Runtime facts** in `spec/adapters.md` carry a review date — re-verify against the vendor's official docs before changing a cell, and update the date.
 
 ## Rules

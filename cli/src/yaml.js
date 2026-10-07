@@ -350,6 +350,7 @@ function parseSkillFrontmatter(content, expectedDirName) {
 
   let name = '';
   let description = '';
+  let compatibility; // optional: undefined when the key is absent
   let currentKey = null;
   let multilineVal = [];
 
@@ -358,6 +359,8 @@ function parseSkillFrontmatter(content, expectedDirName) {
       name = multilineVal.join(' ').trim().replace(/^["']|["']$/g, '');
     } else if (currentKey === 'description') {
       description = multilineVal.join(' ').trim().replace(/^["']|["']$/g, '');
+    } else if (currentKey === 'compatibility') {
+      compatibility = multilineVal.join(' ').trim().replace(/^["']|["']$/g, '');
     }
     multilineVal = [];
   }
@@ -393,6 +396,11 @@ function parseSkillFrontmatter(content, expectedDirName) {
 
   if (!description || description.length === 0 || description.length > 1024) {
     return { valid: false, name, description, error: `description must be between 1 and 1024 characters (current: ${description.length})` };
+  }
+
+  // Optional `compatibility`: 1-500 characters when present (environment requirements).
+  if (compatibility !== undefined && (compatibility.length === 0 || compatibility.length > 500)) {
+    return { valid: false, name, description, error: `compatibility must be between 1 and 500 characters when present (current: ${compatibility.length})` };
   }
 
   return { valid: true, name, description };

@@ -124,7 +124,7 @@ Dieser Standard erhebt das Repository von einem "Buch zum Lesen für die KI" zu 
 3. **Verträge (Das "Wie sie sich verbinden")**: *`Protocols`, `Schemas`, `API Definitions`*
 4. **Fähigkeiten (Das "Wie man eine spezifische Aufgabe erledigt")**: *`SKILL.md`*
 5. **Workflows (Das "Wie man orchestriert")**: *`SOPs`, `Plans`*. Beginnen mit Abnahmekriterien; versionierte Aufgabenpläne in `docs/plans/` lassen die nächste Sitzung weitermachen statt neu anzufangen.
-6. **Werkzeuge (Das "Wie man die Welt berührt")**: *`MCP Servers`, `Deterministic CLI Scripts`*
+6. **Werkzeuge (Das "Wie man die Welt berührt")**: *`MCP Servers`, `Deterministic CLI Scripts`, `.agents/tools.md`*
 7. **Verifizierung & Evaluierung (Der "Beweis")**: *`Tests`, `Validators`, `Hooks`, `Review`, `Evals`*. Zuerst deterministische Prüfungen: Die Arbeit eines Agenten ist nicht beendet, bis sie 0 zurückgeben. Erst danach bewertet ein **begrenzter LLM-as-a-judge**, was kein Befehl entscheiden kann — Abnahmekriterien erfüllt, Umfang eingehalten, Doku noch wahr — mit versionierter Rubrik, unabhängigem Kontext, `UNKNOWN` als gültiger Antwort und ohne Macht, eine fehlgeschlagene Prüfung aufzuheben. Verhaltens-Evals prüfen, ob die Kontextschicht selbst Agenten zum richtigen Verhalten führt.
 8. **Mensch / Agent-Grenze (Die "Vertrauensbarriere")**: *`MANUAL_TASKS.md`*
 

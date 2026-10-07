@@ -17,6 +17,9 @@ Docs are part of the code. Stale docs mislead the next agent more than missing d
 | A rule that must never regress | `docs/invariants/` with a new `INV-` ID, and a test that names the ID |
 | Finished a planned task | its plan in `docs/plans/` (status `done`, decision log) |
 | Something only a human can do | `MANUAL_TASKS.md` with a `[ ]` checkbox |
+| Added, changed or removed an MCP server or agent-facing script | `.agents/tools.md` (purpose, risk level, approval, credential source) |
+| Learned a project fact during the work (or found one only in your runtime's memory) | the doc it belongs to — conventions in `.agents/rules/`, decisions in `docs/adr/`, rules in `docs/invariants/` |
+| Changed interfaces, features or invariant tests, and the repo commits a generated code index | re-run `npx ai-native-repo index` |
 
 Rules:
 

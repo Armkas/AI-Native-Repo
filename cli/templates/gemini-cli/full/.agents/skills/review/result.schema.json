@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ANR review result (reviewer output)",
+  "description": "What the reviewer produces. Tooling adds `meta` (commit, judge runtime and model, rubric version) and computes `overall`; the reviewer never sets them. Strict-mode compatible: every object lists all its properties as required and allows no others.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["criteria", "rubric", "notes"],
+  "properties": {
+    "criteria": {
+      "type": "array",
+      "description": "One entry per acceptance criterion, in the order given.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["criterion", "verdict", "evidence"],
+        "properties": {
+          "criterion": { "type": "string" },
+          "verdict": { "$ref": "#/$defs/verdict" },
+          "evidence": { "type": "string", "description": "file:line, test name or command output. Empty only when the verdict is UNKNOWN." }
+        }
+      }
+    },
+    "rubric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["correctness", "invariants", "scope", "tests", "docs", "safety"],
+      "properties": {
+        "correctness": { "$ref": "#/$defs/judgement" },
+        "invariants": { "$ref": "#/$defs/judgement" },
+        "scope": { "$ref": "#/$defs/judgement" },
+        "tests": { "$ref": "#/$defs/judgement" },
+        "docs": { "$ref": "#/$defs/judgement" },
+        "safety": { "$ref": "#/$defs/judgement" }
+      }
+    },
+    "notes": { "type": "string", "description": "Anything a human should look at; empty string if nothing." }
+  },
+  "$defs": {
+    "verdict": { "type": "string", "enum": ["PASS", "FAIL", "UNKNOWN"] },
+    "judgement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verdict", "evidence"],
+      "properties": {
+        "verdict": { "$ref": "#/$defs/verdict" },
+        "evidence": { "type": "string" }
+      }
+    }
+  }
+}

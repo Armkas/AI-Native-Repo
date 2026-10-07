@@ -82,7 +82,7 @@ ANR defines 8 operational pillars that turn codebases into agent workshops:
 | **3. Contracts** | "How components connect" | `docs/contracts/`, API schemas, database schemas |
 | **4. Skills** | "How to do atomic tasks" | `.agents/skills/<name>/SKILL.md` (Open Agent Skills standard) |
 | **5. Workflows** | "How to orchestrate processes"| SOPs, feature dev workflows, acceptance criteria, versioned plans (`docs/plans/`) |
-| **6. Tools** | "How to touch the world" | MCP Servers, deterministic CLI utilities, build tools |
+| **6. Tools** | "How to touch the world" | MCP Servers, deterministic CLI utilities, build tools — declared in `.agents/tools.md` with risk levels, no credentials in committed config |
 | **7. Verification & Evaluation** | "Closed-loop proof" | Test runners, linters, pre-edit blocking hooks; then a bounded, rubric-based `review` (LLM-as-a-judge) and behavioral `evals/` |
 | **8. Boundaries** | "Human-Agent trust barrier" | `MANUAL_TASKS.md` (Autonomous vs. Approval vs. Manual Only) |
 

@@ -44,6 +44,8 @@ Agents must inspect these contracts first before reading implementation files:
 | **ADR** | [docs/adr/README.md](../docs/adr/README.md) | Architectural Decision Records (Why) |
 | **Plans** | [docs/plans/README.md](../docs/plans/README.md) | Active task plans: acceptance criteria and decision log |
 | **Dependency Map** | [dependency-map.md](dependency-map.md) | Dependency graph and impact assessment |
+| **Tool Inventory** | [tools.md](tools.md) | MCP servers and agent-facing scripts, with risk levels |
+| **Code Index (generated)** | .agents/generated/code-index.md (once generated) | Interface symbols, feature modules, invariant coverage — run `npx ai-native-repo index` to create or refresh it |
 
 ---
 
